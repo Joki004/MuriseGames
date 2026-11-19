@@ -1,4 +1,4 @@
-package com.tanga.api;
+package com.murisegames.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

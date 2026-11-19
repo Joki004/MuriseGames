@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - GM-006-SETTING-UP-THE-PROJECT
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-admin-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SPRING_PROFILES_ACTIVE: test
+      DB_APP_URL: jdbc:postgresql://localhost:5432/postgres
+      DB_APP_USERNAME: murise_app
+      DB_APP_PASSWORD: ci-app-only
+      DB_MIGRATION_URL: jdbc:postgresql://localhost:5432/postgres
+      DB_MIGRATOR_USERNAME: murise_migrator
+      DB_MIGRATOR_PASSWORD: ci-migrator-only
+      SUPABASE_URL: https://example.invalid
+      CORS_ORIGINS: http://localhost:3000
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Prepare temporary database
+        env:
+          PGPASSWORD: ci-admin-only
+        run: |
+          psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE murise_app
+            LOGIN PASSWORD 'ci-app-only'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+
+          CREATE ROLE murise_migrator
+            LOGIN PASSWORD 'ci-migrator-only'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+
+          GRANT CONNECT ON DATABASE postgres
+            TO murise_app, murise_migrator;
+
+          CREATE SCHEMA murise AUTHORIZATION postgres;
+          REVOKE ALL ON SCHEMA murise FROM PUBLIC;
+          GRANT USAGE, CREATE ON SCHEMA murise TO murise_migrator;
+          GRANT USAGE ON SCHEMA murise TO murise_app;
+          SQL
+
+      - name: Test and build backend
+        run: bash gradlew test bootJar --no-daemon
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web/murise-games
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/murise-games/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
