@@ -10,20 +10,33 @@ spring:
     username: ${DB_APP_USERNAME}
     password: ${DB_APP_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      schema: murise
 
   flyway:
     enabled: true
     url: ${DB_MIGRATION_URL}
     user: ${DB_MIGRATOR_USERNAME}
     password: ${DB_MIGRATOR_PASSWORD}
+    default-schema: murise
+    schemas:
+      - murise
+    create-schemas: false
     clean-disabled: true
+    baseline-on-migrate: false
     validate-on-migrate: true
+    validate-migration-naming: true
+    locations:
+      - classpath:db/migration
 
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        default_schema: murise
 
   security:
     oauth2:
@@ -33,6 +46,9 @@ spring:
           jwk-set-uri: ${SUPABASE_URL}/auth/v1/.well-known/jwks.json
           audiences:
             - authenticated
+          jws-algorithms:
+            - ES256
+            - RS256
 
 server:
   port: ${PORT:8080}
