@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: murisegames-api
+
+  profiles:
+    default: none
+
+  datasource:
+    url: ${DB_APP_URL}
+    username: ${DB_APP_USERNAME}
+    password: ${DB_APP_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: true
+    url: ${DB_MIGRATION_URL}
+    user: ${DB_MIGRATOR_USERNAME}
+    password: ${DB_MIGRATOR_PASSWORD}
+    clean-disabled: true
+    validate-on-migrate: true
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_URL}/auth/v1
+          jwk-set-uri: ${SUPABASE_URL}/auth/v1/.well-known/jwks.json
+          audiences:
+            - authenticated
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS}
