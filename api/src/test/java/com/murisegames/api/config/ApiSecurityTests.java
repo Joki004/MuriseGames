@@ -11,9 +11,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(MeController.class)
+@ActiveProfiles("test")
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = {
     "app.auth.issuer=https://example.invalid/auth/v1",
