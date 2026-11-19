@@ -1,0 +1,5 @@
+# Supply configuration using the hosting provider's environment settings.
+# Do not load a local .env file in production.
+logging:
+  level:
+    root: INFO

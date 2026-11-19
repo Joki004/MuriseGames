@@ -1,0 +1,9 @@
+spring:
+  config:
+    import: optional:file:./.env[.properties]
+  devtools:
+    restart:
+      enabled: true
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000}

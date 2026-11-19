@@ -1,0 +1,17 @@
+# Loaded only from test sources. Never use production credentials for tests.
+spring:
+  datasource:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: murise_app
+    password: test-app-only
+  flyway:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
+    user: murise_migrator
+    password: test-migrator-only
+app:
+  auth:
+    issuer: https://example.invalid/auth/v1
+    jwk-set-uri: https://example.invalid/auth/v1/.well-known/jwks.json
+    audience: authenticated
+  cors:
+    allowed-origins: http://localhost:3000

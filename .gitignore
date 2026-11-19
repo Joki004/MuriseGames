@@ -1,0 +1,17 @@
+.idea/
+.vscode/
+*.iml
+.DS_Store
+.env
+.env.*
+!.env.example
+**/.gradle/
+**/build/
+**/node_modules/
+**/.next/
+**/out/
+*.tsbuildinfo
+*.log
+*.pem
+*.key
+**/coverage/

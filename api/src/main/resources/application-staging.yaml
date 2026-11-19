@@ -1,0 +1,4 @@
+# Optional future environment; do not point this at the production project.
+logging:
+  level:
+    root: INFO
