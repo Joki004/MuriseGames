@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/murise_test
+    username: murise_app_test
+    password: murise_app_test_password
+
+  flyway:
+    enabled: false
+    url: jdbc:postgresql://localhost:5432/murise_test
+    user: murise_migrator_test
+    password: murise_migrator_test_password
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://test.supabase.co/auth/v1
+          jwk-set-uri: https://test.supabase.co/auth/v1/.well-known/jwks.json
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+  swagger:
+    enabled: false
