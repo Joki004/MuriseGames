@@ -7,6 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.murisegames.api.modules.Event.EventRepository;
+import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
+import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
+import com.murisegames.api.modules.Event.Team.TeamRepository;
+import com.murisegames.api.modules.Event.Invite.EventInviteRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -22,6 +27,21 @@ class ApiApplicationTests {
 
     @MockitoBean
     private EntityManager entityManager;
+
+    @MockitoBean
+    private EventRepository eventRepository;
+
+    @MockitoBean
+    private EventMembershipRepository eventMembershipRepository;
+
+    @MockitoBean
+    private EventRoleGrantRepository eventRoleGrantRepository;
+
+    @MockitoBean
+    private TeamRepository teamRepository;
+
+    @MockitoBean
+    private EventInviteRepository eventInviteRepository;
 
     @Test
     void contextLoads() {

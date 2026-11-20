@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/component/Auth/AuthProvider";
 import { ProfileCard } from "@/component/User/ProfileCard";
+import { EventPanel } from "@/component/Event/EventPanel";
 
 export function DashboardView() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export function DashboardView() {
       <header className="flex items-center justify-between border-b border-zinc-800 pb-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
-            MuriseGames · Pass 1 Verified
+            MuriseGames
           </p>
           <h1 className="mt-1 text-2xl font-bold text-zinc-100">
             {account ? `Welcome, ${account.displayName}` : "Dashboard"}
@@ -132,6 +133,8 @@ export function DashboardView() {
             initialDisplayName={account.displayName}
             onUpdated={applyProfileUpdate}
           />
+
+          <EventPanel key={account.id} />
         </div>
       )}
     </main>
