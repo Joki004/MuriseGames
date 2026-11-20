@@ -65,3 +65,20 @@ management:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS}
+  swagger:
+    enabled: ${SWAGGER_ENABLED:false}
+
+springdoc:
+  packages-to-scan:
+    - com.murisegames.api.modules
+  paths-to-match:
+    - /api/**
+  api-docs:
+    enabled: ${app.swagger.enabled}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${app.swagger.enabled}
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    persist-authorization: true
