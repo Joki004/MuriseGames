@@ -7,6 +7,7 @@ import com.murisegames.api.modules.Event.EventRepository;
 import com.murisegames.api.modules.Event.Invite.EventInviteRepository;
 import com.murisegames.api.modules.Event.Invite.InviteRedemptionLimiter;
 import com.murisegames.api.modules.Event.JoinRequest.JoinRequestRepository;
+import com.murisegames.api.modules.Event.Live.EventStateRepository;
 import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
 import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
 import com.murisegames.api.modules.Event.Participant.EventParticipantRepository;
@@ -90,6 +91,9 @@ class ApiApplicationTests {
 
     @MockitoBean
     private MediaAssetRepository mediaAssetRepository;
+
+    @MockitoBean
+    private EventStateRepository eventStateRepository;
 
     @Test
     void contextLoads() {

@@ -13,6 +13,7 @@ import { ScoreboardPanel } from "./Scoring/ScoreboardPanel";
 import { EventRolePanel } from "./Role/EventRolePanel";
 import { AsyncContent } from "@/component/ui/AsyncContent";
 import { ParticipantController } from "@/modules/Event/Participant";
+import { EventLivePanel } from "./Live/EventLivePanel";
 import {
   Alert,
   Badge,
@@ -151,7 +152,7 @@ export function EventOverview() {
           </Card>
         </section>
       )}
-
+      <EventLivePanel eventId={event.id} canManage={canManage} />
       <Card>
         <CardHeader>
           <CardTitle>About this event</CardTitle>
