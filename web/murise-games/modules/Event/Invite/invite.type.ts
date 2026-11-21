@@ -18,3 +18,15 @@ export interface InviteCreatedResponse {
   invite: EventInviteResponse;
   token: string;
 }
+
+export type InviteRedeemResponse =
+  | {
+      status: "JOINED";
+      eventId: string;
+      requestId: null;
+    }
+  | {
+      status: "PENDING";
+      eventId: null;
+      requestId: string;
+    };

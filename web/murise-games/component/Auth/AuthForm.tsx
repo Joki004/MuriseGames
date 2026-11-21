@@ -2,11 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import {AuthController} from "@/modules/Auth/auth.controller";
-    
-    type AuthMode = "login" | "signup" | "recovery";
+import { AuthController } from "@/modules/Auth/auth.controller";
 
-export function AuthForm() {
+type AuthMode = "login" | "signup" | "recovery";
+
+interface AuthFormProps {
+  returnTo?: "/dashboard" | "/join";
+}
+
+export function AuthForm({ returnTo = "/dashboard" }: AuthFormProps) {
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -31,19 +35,24 @@ export function AuthForm() {
     try {
       if (mode === "login") {
         await AuthController.signIn(email, password);
-        router.replace("/dashboard");
+        router.replace(returnTo);
         return;
       }
 
       if (mode === "signup") {
-        const result = await AuthController.signUp(email, password, displayName);
+        const result = await AuthController.signUp(
+          email,
+          password,
+          displayName,
+          returnTo,
+        );
         if (result.requiresEmailConfirmation) {
           setMessage({
             type: "success",
             text: "Account created. Check your email for the confirmation link.",
           });
         } else {
-          router.replace("/dashboard");
+          router.replace(returnTo);
         }
         return;
       }

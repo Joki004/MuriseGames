@@ -9,7 +9,7 @@ const inFlightCallbacks = new Map<string, Promise<string | null>>();
 
 function runOnce(
   key: string,
-  operation: () => Promise<string | null>
+  operation: () => Promise<string | null>,
 ): Promise<string | null> {
   const existing = inFlightCallbacks.get(key);
   if (existing) {
@@ -37,7 +37,9 @@ export function AuthCallbackView() {
     const type = searchParams.get("type");
     const nextParam = searchParams.get("next");
     const safeNext =
-      nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      nextParam === "/join" ||
+      nextParam === "/reset-password" ||
+      nextParam === "/dashboard"
         ? nextParam
         : "/dashboard";
 
@@ -48,13 +50,16 @@ export function AuthCallbackView() {
       }
 
       if (tokenHash && type) {
-        const errMessage = await runOnce(`otp:${type}:${tokenHash}`, async () => {
-          const { error: otpError } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: type as EmailOtpType,
-          });
-          return otpError ? otpError.message : null;
-        });
+        const errMessage = await runOnce(
+          `otp:${type}:${tokenHash}`,
+          async () => {
+            const { error: otpError } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type: type as EmailOtpType,
+            });
+            return otpError ? otpError.message : null;
+          },
+        );
 
         if (!active) return;
         if (errMessage) {

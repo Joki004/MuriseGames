@@ -3,3 +3,7 @@ export * from "./event.service";
 export * from "./event.controller";
 export * from "./Team";
 export * from "./Invite";
+export * from "./JoinRequest";
+export * from "./Participant";
+export * from "./EventGame";
+export * from "./Scoring"

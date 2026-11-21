@@ -12,6 +12,9 @@ import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
 import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
 import com.murisegames.api.modules.Event.Team.TeamRepository;
 import com.murisegames.api.modules.Event.Invite.EventInviteRepository;
+import com.murisegames.api.modules.Event.Invite.InviteRedemptionLimiter;
+import com.murisegames.api.modules.Event.JoinRequest.JoinRequestRepository;
+import com.murisegames.api.modules.Event.Participant.EventParticipantRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -42,6 +45,15 @@ class ApiApplicationTests {
 
     @MockitoBean
     private EventInviteRepository eventInviteRepository;
+
+    @MockitoBean
+    private JoinRequestRepository joinRequestRepository;
+
+    @MockitoBean
+    private EventParticipantRepository eventParticipantRepository;
+
+    @MockitoBean
+    private InviteRedemptionLimiter inviteRedemptionLimiter;
 
     @Test
     void contextLoads() {
