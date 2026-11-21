@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.murisegames.api.modules.Event.Clue.SceneClueRepository;
+import com.murisegames.api.modules.Event.Clue.SceneEntryRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -94,6 +96,12 @@ class ApiApplicationTests {
 
     @MockitoBean
     private EventStateRepository eventStateRepository;
+
+    @MockitoBean
+    private SceneEntryRepository sceneEntryRepository;
+
+    @MockitoBean
+    private SceneClueRepository sceneClueRepository;
 
     @Test
     void contextLoads() {
