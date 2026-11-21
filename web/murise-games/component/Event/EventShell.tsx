@@ -80,7 +80,10 @@ function EventHeader() {
     { href: `${base}/people`, label: "People" },
     { href: `${base}/games`, label: "Games" },
     ...(canManage
-      ? [{ href: `${base}/invitations`, label: "Invitations" }]
+      ? [
+          { href: `${base}/invitations`, label: "Invitations" },
+          { href: `${base}/clues`, label: "Clues" },
+        ]
       : []),
   ];
 

@@ -8,3 +8,4 @@ export * from "./Participant";
 export * from "./EventGame";
 export * from "./Scoring";
 export * from "./Role";
+export * from "./Clue";
