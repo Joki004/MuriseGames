@@ -277,9 +277,9 @@ useEffect(() => {
           </Card>
         </div>
 
-        <Dialog
+       <Dialog
           open={confirmReset}
-          onClose={() => setConfirmReset(false)}
+          onOpenChange={setConfirmReset}
           title="Reset live event state?"
           description="This clears the active game, stops the timer, returns all screens to lobby, and resets every team's readiness."
         >
