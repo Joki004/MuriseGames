@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CatalogController,
   type CatalogGameResponse,
@@ -31,30 +31,46 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
   const [newMode, setNewMode] = useState<ParticipationMode>("all_teams");
   const [newSummary, setNewSummary] = useState("");
 
+  const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+
+    async function fetchLineup() {
+      try {
+        const [games, catalogGames] = await Promise.all([
+          EventGameController.list(eventId),
+          CatalogController.list(),
+        ]);
+        if (active) {
+          setLineup(games);
+          setCatalog(catalogGames);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Could not load games.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchLineup();
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, revision]);
+
+  function reload() {
     setLoading(true);
     setError(null);
-    try {
-      const [games, catalogGames] = await Promise.all([
-        EventGameController.list(eventId),
-        CatalogController.list(),
-      ]);
-      setLineup(games);
-      setCatalog(catalogGames);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not load games.");
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    setRevision((v) => v + 1);
+  }
 
   const availableToAdd = catalog.filter(
     (c) => !lineup.some((g) => g.gameDefinitionId === c.definitionId)
@@ -70,7 +86,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
         sortOrder: lineup.length,
       });
       setSelectedDefId("");
-      await load();
+      reload();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not add game.");
     } finally {
@@ -109,7 +125,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
       setNewName("");
       setNewSummary("");
       setShowNewGame(false);
-      await load();
+      reload();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not create game.");
     } finally {
@@ -153,7 +169,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
           </button>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={reload}
             disabled={loading}
             className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
           >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ParticipantController,
   type EventParticipantResponse,
@@ -21,29 +21,45 @@ export function ParticipantPanel({
   );
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+
+    async function fetchRoster() {
+      try {
+        const [roster, activeTeams] = await Promise.all([
+          ParticipantController.list(eventId),
+          ParticipantController.listActiveTeamOptions(eventId),
+        ]);
+        if (active) {
+          setParticipants(roster);
+          setTeams(activeTeams);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Could not load roster.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchRoster();
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, revision, refreshTrigger]);
+
+  function reload() {
     setLoading(true);
     setError(null);
-    try {
-      const [roster, activeTeams] = await Promise.all([
-        ParticipantController.list(eventId),
-        ParticipantController.listActiveTeamOptions(eventId),
-      ]);
-      setParticipants(roster);
-      setTeams(activeTeams);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not load roster.");
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    void load();
-  }, [load, refreshTrigger]);
+    setRevision((v) => v + 1);
+  }
 
   async function handleTeamChange(participantId: string, nextTeamId: string) {
     setSavingId(participantId);
@@ -74,7 +90,7 @@ export function ParticipantPanel({
         </h4>
         <button
           type="button"
-          onClick={() => void load()}
+          onClick={reload}
           disabled={loading}
           className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
         >

@@ -1,117 +1,182 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  JoinRequestController,
-  type JoinRequestResponse,
-} from "@/modules/Event/JoinRequest";
+  CatalogController,
+  type CatalogGameResponse,
+  type GameKind,
+  type ParticipationMode,
+} from "@/modules/Catalog";
 import {
-  ParticipantController,
-  type TeamOption,
-} from "@/modules/Event/Participant";
+  EventGameController,
+  type EventGameResponse,
+  type EventGameStatus,
+} from "@/modules/Event/EventGame";
 
-interface JoinRequestPanelProps {
+interface EventGamePanelProps {
   eventId: string;
-  onApproved?: () => void;
 }
 
-export function JoinRequestPanel({
-  eventId,
-  onApproved,
-}: JoinRequestPanelProps) {
-  const [requests, setRequests] = useState<JoinRequestResponse[] | null>(null);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
-  const [selectedTeamByRequest, setSelectedTeamByRequest] = useState<
-    Record<string, string>
-  >({});
-  const [busyId, setBusyId] = useState<string | null>(null);
+const STATUSES: EventGameStatus[] = ["scheduled", "active", "settled", "voided"];
+
+export function EventGamePanel({ eventId }: EventGamePanelProps) {
+  const [lineup, setLineup] = useState<EventGameResponse[]>([]);
+  const [catalog, setCatalog] = useState<CatalogGameResponse[]>([]);
+  const [selectedDefId, setSelectedDefId] = useState("");
+  const [showNewGame, setShowNewGame] = useState(false);
+
+  // Quick-create catalog game fields
+  const [newName, setNewName] = useState("");
+  const [newKind, setNewKind] = useState<GameKind>("party");
+  const [newMode, setNewMode] = useState<ParticipationMode>("all_teams");
+  const [newSummary, setNewSummary] = useState("");
+
+  const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+
+    async function fetchLineup() {
+      try {
+        const [games, catalogGames] = await Promise.all([
+          EventGameController.list(eventId),
+          CatalogController.list(),
+        ]);
+        if (active) {
+          setLineup(games);
+          setCatalog(catalogGames);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Could not load games.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchLineup();
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, revision]);
+
+  function reload() {
     setLoading(true);
     setError(null);
-    try {
-      const pending = await JoinRequestController.listForOrganizer(
-        eventId,
-        "pending"
-      );
-      setRequests(pending);
+    setRevision((v) => v + 1);
+  }
 
-      if (pending !== null) {
-        const activeTeams =
-          await ParticipantController.listActiveTeamOptions(eventId);
-        setTeams(activeTeams);
-      }
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Could not load waiting room."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
+  const availableToAdd = catalog.filter(
+    (c) => !lineup.some((g) => g.gameDefinitionId === c.definitionId)
+  );
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function handleApprove(requestId: string) {
-    setBusyId(requestId);
+  async function handleAddSelected() {
+    if (!selectedDefId) return;
+    setBusy(true);
     setError(null);
     try {
-      const chosenTeam = selectedTeamByRequest[requestId] || null;
-      await JoinRequestController.approve(eventId, requestId, chosenTeam);
-      await load();
-      onApproved?.();
+      await EventGameController.add(eventId, {
+        gameDefinitionId: selectedDefId,
+        sortOrder: lineup.length,
+      });
+      setSelectedDefId("");
+      reload();
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Could not approve request."
-      );
+      setError(err instanceof Error ? err.message : "Could not add game.");
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   }
 
-  async function handleReject(requestId: string) {
-    setBusyId(requestId);
+  async function handleQuickCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setBusy(true);
     setError(null);
     try {
-      await JoinRequestController.reject(eventId, requestId);
-      await load();
+      const code = newName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const created = await CatalogController.create({
+        code,
+        name: newName.trim(),
+        kind: newKind,
+        summary: newSummary.trim() || `${newName.trim()} game`,
+        rulesMarkdown: newSummary.trim() || "Organizer-led rules.",
+        endGameScoringSummary: "Points awarded by organizer.",
+        participationMode: newMode,
+        scoringHandler: "manual_points",
+      });
+
+      await EventGameController.add(eventId, {
+        gameDefinitionId: created.definitionId,
+        sortOrder: lineup.length,
+      });
+
+      setNewName("");
+      setNewSummary("");
+      setShowNewGame(false);
+      reload();
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Could not reject request."
-      );
+      setError(err instanceof Error ? err.message : "Could not create game.");
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   }
 
-  // Non-organizer: hide waiting room completely.
-  if (!loading && requests === null && !error) {
-    return null;
+  async function handleStatusChange(
+    eventGameId: string,
+    status: EventGameStatus
+  ) {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await EventGameController.update(eventId, eventGameId, {
+        status,
+      });
+      setLineup((prev) =>
+        prev.map((g) => (g.id === updated.id ? updated : g))
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not update status.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-          Waiting Room {requests ? `(${requests.length})` : ""}
+          Game Lineup ({lineup.length})
         </h4>
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={loading}
-          className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
-        >
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowNewGame((v) => !v)}
+            className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-200 hover:bg-zinc-800"
+          >
+            {showNewGame ? "Cancel" : "+ New Game"}
+          </button>
+          <button
+            type="button"
+            onClick={reload}
+            disabled={loading}
+            className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
-
-      {loading && (
-        <p className="mt-2 text-xs text-zinc-400">Loading waiting room…</p>
-      )}
 
       {error && (
         <p role="alert" className="mt-2 text-xs text-rose-300">
@@ -119,63 +184,129 @@ export function JoinRequestPanel({
         </p>
       )}
 
-      {!loading && requests && requests.length === 0 && (
-        <p className="mt-2 text-xs text-zinc-500">No pending join requests.</p>
+      {showNewGame && (
+        <form
+          onSubmit={(e) => void handleQuickCreate(e)}
+          className="mt-3 space-y-2 rounded-md border border-zinc-800 bg-zinc-950/70 p-3 text-xs"
+        >
+          <div className="grid gap-2 sm:grid-cols-3">
+            <input
+              type="text"
+              required
+              placeholder="Game name (e.g. Unified Alibi)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+            />
+            <select
+              value={newKind}
+              onChange={(e) => setNewKind(e.target.value as GameKind)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+            >
+              <option value="party">Party</option>
+              <option value="competitive">Competitive</option>
+              <option value="social_deduction">Social Deduction</option>
+              <option value="rehearsal">Rehearsal</option>
+            </select>
+            <select
+              value={newMode}
+              onChange={(e) => setNewMode(e.target.value as ParticipationMode)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+            >
+              <option value="all_teams">All Teams</option>
+              <option value="head_to_head">Head to Head</option>
+              <option value="team_solo">Team Solo</option>
+              <option value="multi_team_pod">Multi-Team Pod</option>
+              <option value="individual">Individual</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Short summary (optional)"
+              value={newSummary}
+              onChange={(e) => setNewSummary(e.target.value)}
+              className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-100"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded bg-emerald-600 px-3 py-1 font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              Create & Add
+            </button>
+          </div>
+        </form>
       )}
 
-      {!loading && requests && requests.length > 0 && (
-        <ul className="mt-2 space-y-2">
-          {requests.map((req) => (
+      {availableToAdd.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <select
+            value={selectedDefId}
+            onChange={(e) => setSelectedDefId(e.target.value)}
+            className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+          >
+            <option value="">Add from catalog…</option>
+            {availableToAdd.map((game) => (
+              <option key={game.definitionId} value={game.definitionId}>
+                {game.name} ({game.kind})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!selectedDefId || busy}
+            onClick={() => void handleAddSelected()}
+            className="rounded-md bg-zinc-800 px-3 py-1 text-xs text-zinc-100 hover:bg-zinc-700 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <p className="mt-2 text-xs text-zinc-400">Loading lineup…</p>
+      )}
+
+      {!loading && lineup.length === 0 && (
+        <p className="mt-2 text-xs text-zinc-500">
+          No games in this event yet.
+        </p>
+      )}
+
+      {!loading && lineup.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {lineup.map((game, index) => (
             <li
-              key={req.id}
+              key={game.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm"
             >
               <div>
-                <p className="font-medium text-zinc-100">{req.displayName}</p>
+                <p className="font-medium text-zinc-100">
+                  {index + 1}. {game.name}
+                </p>
                 <p className="text-xs text-zinc-500">
-                  Requested {new Date(req.createdAt).toLocaleString()}
+                  {game.kind} · {game.participationMode}
                 </p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  aria-label={`Assign team for ${req.displayName}`}
-                  value={selectedTeamByRequest[req.id] ?? ""}
-                  onChange={(e) =>
-                    setSelectedTeamByRequest((prev) => ({
-                      ...prev,
-                      [req.id]: e.target.value,
-                    }))
-                  }
-                  disabled={busyId === req.id}
-                  className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
-                >
-                  <option value="">No team yet</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  disabled={busyId === req.id}
-                  onClick={() => void handleApprove(req.id)}
-                  className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  Approve
-                </button>
-
-                <button
-                  type="button"
-                  disabled={busyId === req.id}
-                  onClick={() => void handleReject(req.id)}
-                  className="rounded-md border border-rose-800 bg-rose-950/50 px-2.5 py-1 text-xs font-medium text-rose-200 hover:bg-rose-900/60 disabled:opacity-50"
-                >
-                  Reject
-                </button>
-              </div>
+              <select
+                aria-label={`Status for ${game.name}`}
+                value={game.status}
+                disabled={busy}
+                onChange={(e) =>
+                  void handleStatusChange(
+                    game.id,
+                    e.target.value as EventGameStatus
+                  )
+                }
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </li>
           ))}
         </ul>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ParticipantController,
   type TeamOption,
@@ -28,34 +28,50 @@ export function ScoreboardPanel({ eventId }: ScoreboardPanelProps) {
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
 
+  const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+
+    async function fetchScoreboard() {
+      try {
+        const [scoreboard, ledger, activeTeams] = await Promise.all([
+          ScoringController.getScoreboard(eventId),
+          ScoringController.listEntriesForOrganizer(eventId),
+          ParticipantController.listActiveTeamOptions(eventId),
+        ]);
+        if (active) {
+          setBoard(scoreboard);
+          setEntries(ledger);
+          setTeams(activeTeams);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (active) {
+          setError(
+            err instanceof Error ? err.message : "Could not load scoreboard."
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void fetchScoreboard();
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, revision]);
+
+  function reload() {
     setLoading(true);
     setError(null);
-    try {
-      const [scoreboard, ledger, activeTeams] = await Promise.all([
-        ScoringController.getScoreboard(eventId),
-        ScoringController.listEntriesForOrganizer(eventId),
-        ParticipantController.listActiveTeamOptions(eventId),
-      ]);
-      setBoard(scoreboard);
-      setEntries(ledger);
-      setTeams(activeTeams);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Could not load scoreboard."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    setRevision((v) => v + 1);
+  }
 
   const isOrganizer = entries !== null;
 
@@ -93,7 +109,7 @@ export function ScoreboardPanel({ eventId }: ScoreboardPanelProps) {
       });
       setDelta("");
       setReason("");
-      await load();
+      reload();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not record score.");
     } finally {
@@ -110,7 +126,7 @@ export function ScoreboardPanel({ eventId }: ScoreboardPanelProps) {
         entryId,
         "Organizer reversal"
       );
-      await load();
+      reload();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not reverse entry.");
     } finally {
@@ -156,7 +172,7 @@ export function ScoreboardPanel({ eventId }: ScoreboardPanelProps) {
           )}
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={reload}
             disabled={loading}
             className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
           >
