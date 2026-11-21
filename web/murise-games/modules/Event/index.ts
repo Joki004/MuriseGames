@@ -6,4 +6,5 @@ export * from "./Invite";
 export * from "./JoinRequest";
 export * from "./Participant";
 export * from "./EventGame";
-export * from "./Scoring"
+export * from "./Scoring";
+export * from "./Role";

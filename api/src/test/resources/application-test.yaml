@@ -22,3 +22,6 @@ app:
     allowed-origins: http://localhost:3000
   swagger:
     enabled: false
+  pictures:
+    supabase-url: https://example.supabase.co
+    service-role-key: test-service-role-key
