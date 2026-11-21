@@ -4,6 +4,7 @@ import com.murisegames.api.modules.Event.Membership.EventMembershipService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -45,7 +47,6 @@ public class EventLiveService {
     }
 
     public EventSnapshotResponse getSnapshot(UUID eventId, UUID actorId) {
-        // Re-checks current DB grants on every poll; revoked users are denied immediately.
         Set<String> roles = memberships.requireAccess(eventId, actorId);
         EventMeta meta = loadEventMeta(eventId);
         EventState state = stateRepository.findById(eventId).orElse(null);
@@ -64,14 +65,7 @@ public class EventLiveService {
         EventMeta meta = loadEventMeta(eventId);
         Instant now = Instant.now(clock);
 
-        EventState state = stateRepository.lockByEventId(eventId)
-                .orElseGet(() -> {
-                    EventState created = new EventState();
-                    created.setEventId(eventId);
-                    created.setVersion(0);
-                    return created;
-                });
-
+        EventState state = lockOrInitState(eventId);
         state.setCurrentEventGameId(request.currentEventGameId());
         state.setPhase(request.phase().trim());
         state.setPausedRemainingMs(null);
@@ -131,6 +125,109 @@ public class EventLiveService {
         return toSnapshot(eventId, meta, roles, saved, now);
     }
 
+    @Transactional
+    public EventSnapshotResponse setTeamReady(
+            UUID eventId,
+            UUID teamId,
+            boolean ready,
+            UUID actorId
+    ) {
+        Set<String> roles = memberships.requireAccess(eventId, actorId);
+
+        if (!roles.contains("ORGANIZER") && !isActiveTeamMember(eventId, teamId, actorId)) {
+            throw new AccessDeniedException("You can only update readiness for your own team.");
+        }
+
+        EventMeta meta = loadEventMeta(eventId);
+        Instant now = Instant.now(clock);
+        EventState state = lockOrInitState(eventId);
+
+        entityManager.createNativeQuery("""
+                insert into murise.event_team_readiness (event_id, team_id, ready, updated_by)
+                values (:eventId, :teamId, :ready, :actorId)
+                on conflict (event_id, team_id)
+                do update set ready = excluded.ready, updated_by = excluded.updated_by
+                """)
+                .setParameter("eventId", eventId)
+                .setParameter("teamId", teamId)
+                .setParameter("ready", ready)
+                .setParameter("actorId", actorId)
+                .executeUpdate();
+
+        state.setVersion(state.getVersion() + 1);
+        EventState saved = stateRepository.saveAndFlush(state);
+        return toSnapshot(eventId, meta, roles, saved, now);
+    }
+
+    @Transactional
+    public EventSnapshotResponse resetState(UUID eventId, UUID actorId) {
+        memberships.requireOrganizer(eventId, actorId);
+        Set<String> roles = memberships.requireAccess(eventId, actorId);
+        EventMeta meta = loadEventMeta(eventId);
+        Instant now = Instant.now(clock);
+
+        EventState state = lockOrInitState(eventId);
+        entityManager.createNativeQuery("""
+                delete from murise.event_team_readiness
+                where event_id = :eventId
+                """)
+                .setParameter("eventId", eventId)
+                .executeUpdate();
+
+        state.setCurrentEventGameId(null);
+        state.setPhase("lobby");
+        state.setDeadlineAt(null);
+        state.setPausedRemainingMs(null);
+        state.setVersion(state.getVersion() + 1);
+
+        EventState saved = stateRepository.saveAndFlush(state);
+        return toSnapshot(eventId, meta, roles, saved, now);
+    }
+
+    private EventState lockOrInitState(UUID eventId) {
+        return stateRepository.lockByEventId(eventId)
+                .orElseGet(() -> {
+                    EventState created = new EventState();
+                    created.setEventId(eventId);
+                    created.setPhase("lobby");
+                    created.setVersion(0);
+                    return created;
+                });
+    }
+
+    private boolean isActiveTeamMember(UUID eventId, UUID teamId, UUID userId) {
+        Object result = entityManager.createNativeQuery("""
+                select exists(
+                    select 1
+                    from murise.event_participants
+                    where event_id = :eventId
+                      and team_id = :teamId
+                      and user_id = :userId
+                      and status = 'active'
+                )
+                """)
+                .setParameter("eventId", eventId)
+                .setParameter("teamId", teamId)
+                .setParameter("userId", userId)
+                .getSingleResult();
+        return Boolean.TRUE.equals(result);
+    }
+
+    private Set<UUID> loadReadyTeamIds(UUID eventId) {
+        List<?> rows = entityManager.createNativeQuery("""
+                select team_id
+                from murise.event_team_readiness
+                where event_id = :eventId
+                  and ready = true
+                """)
+                .setParameter("eventId", eventId)
+                .getResultList();
+
+        return rows.stream()
+                .map(row -> row instanceof UUID uuid ? uuid : UUID.fromString(String.valueOf(row)))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     private EventSnapshotResponse toSnapshot(
             UUID eventId,
             EventMeta meta,
@@ -138,6 +235,8 @@ public class EventLiveService {
             EventState state,
             Instant serverTime
     ) {
+        Set<UUID> readyTeamIds = loadReadyTeamIds(eventId);
+
         if (state == null) {
             return new EventSnapshotResponse(
                     eventId,
@@ -151,7 +250,8 @@ public class EventLiveService {
                     null,
                     null,
                     false,
-                    null
+                    null,
+                    readyTeamIds
             );
         }
 
@@ -167,7 +267,8 @@ public class EventLiveService {
                 state.getDeadlineAt(),
                 state.getPausedRemainingMs(),
                 state.getPausedRemainingMs() != null,
-                state.getUpdatedAt()
+                state.getUpdatedAt(),
+                readyTeamIds
         );
     }
 

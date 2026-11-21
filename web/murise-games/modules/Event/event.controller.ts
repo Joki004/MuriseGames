@@ -7,6 +7,7 @@ import type {
   EventDetailResponse,
 } from "./event.type";
 
+
 function optionalText(value: string): string | null {
   return value.trim() || null;
 }

@@ -11,6 +11,7 @@ export interface EventSnapshotResponse {
   pausedRemainingMs: number | null;
   paused: boolean;
   stateUpdatedAt: string | null;
+  readyTeamIds: string[];
 }
 
 export interface EventStateUpdateRequest {

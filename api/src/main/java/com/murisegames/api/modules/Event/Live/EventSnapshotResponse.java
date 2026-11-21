@@ -16,6 +16,7 @@ public record EventSnapshotResponse(
         Instant deadlineAt,
         Long pausedRemainingMs,
         boolean paused,
-        Instant stateUpdatedAt
+        Instant stateUpdatedAt,
+        Set<UUID> readyTeamIds
 ) {
 }

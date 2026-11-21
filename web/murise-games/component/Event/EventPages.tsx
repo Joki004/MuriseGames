@@ -152,6 +152,30 @@ export function EventOverview() {
           </Card>
         </section>
       )}
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/events/${event.id}/play`}
+          className="ui-button ui-button--primary"
+        >
+          Player screen
+        </Link>
+
+        <Link
+          href={`/events/${event.id}/tv`}
+          className="ui-button ui-button--secondary"
+        >
+          TV display
+        </Link>
+
+        {canManage && (
+          <Link
+            href={`/events/${event.id}/host`}
+            className="ui-button ui-button--secondary"
+          >
+            Host control deck
+          </Link>
+        )}
+      </div>
       <EventLivePanel eventId={event.id} canManage={canManage} />
       <Card>
         <CardHeader>
