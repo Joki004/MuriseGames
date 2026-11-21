@@ -1,5 +1,19 @@
 package com.murisegames.api;
 
+import com.murisegames.api.modules.Catalog.GameDefinitionRepository;
+import com.murisegames.api.modules.Catalog.GameVersionRepository;
+import com.murisegames.api.modules.Event.EventGame.EventGameRepository;
+import com.murisegames.api.modules.Event.EventRepository;
+import com.murisegames.api.modules.Event.Invite.EventInviteRepository;
+import com.murisegames.api.modules.Event.Invite.InviteRedemptionLimiter;
+import com.murisegames.api.modules.Event.JoinRequest.JoinRequestRepository;
+import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
+import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
+import com.murisegames.api.modules.Event.Participant.EventParticipantRepository;
+import com.murisegames.api.modules.Event.Scoring.ScoreEntryRepository;
+import com.murisegames.api.modules.Event.Scoring.ScoreboardSnapshotRepository;
+import com.murisegames.api.modules.Event.Scoring.ScoreboardSnapshotRowRepository;
+import com.murisegames.api.modules.Event.Team.TeamRepository;
 import com.murisegames.api.modules.User.PlatformRoleGrantRepository;
 import com.murisegames.api.modules.User.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -7,14 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import com.murisegames.api.modules.Event.EventRepository;
-import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
-import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
-import com.murisegames.api.modules.Event.Team.TeamRepository;
-import com.murisegames.api.modules.Event.Invite.EventInviteRepository;
-import com.murisegames.api.modules.Event.Invite.InviteRedemptionLimiter;
-import com.murisegames.api.modules.Event.JoinRequest.JoinRequestRepository;
-import com.murisegames.api.modules.Event.Participant.EventParticipantRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -54,6 +60,24 @@ class ApiApplicationTests {
 
     @MockitoBean
     private InviteRedemptionLimiter inviteRedemptionLimiter;
+
+    @MockitoBean
+    private GameDefinitionRepository gameDefinitionRepository;
+
+    @MockitoBean
+    private GameVersionRepository gameVersionRepository;
+
+    @MockitoBean
+    private EventGameRepository eventGameRepository;
+
+    @MockitoBean
+    private ScoreEntryRepository scoreEntryRepository;
+
+    @MockitoBean
+    private ScoreboardSnapshotRepository scoreboardSnapshotRepository;
+
+    @MockitoBean
+    private ScoreboardSnapshotRowRepository scoreboardSnapshotRowRepository;
 
     @Test
     void contextLoads() {
