@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { EventController } from "@/modules/Event/event.controller";
-import { JoinRequestPanel } from "@/component/Event/JoinRequest/JoinRequestPanel";
+import { JoinRequestPanel } from "./JoinRequest/JoinRequestPanel";
 import { ParticipantPanel } from "@/component/Event/Participant/ParticipantPanel";
 import type { EventPage, EventResponse } from "@/modules/Event/event.type";
 import { EventCreateForm } from "./EventCreateForm";
