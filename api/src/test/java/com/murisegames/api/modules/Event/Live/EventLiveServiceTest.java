@@ -38,6 +38,8 @@ class EventLiveServiceTest {
     @Mock
     private Query query;
 
+
+
     private Instant fixedNow;
     private EventLiveService service;
     private UUID eventId;
@@ -57,9 +59,13 @@ class EventLiveServiceTest {
     }
 
     private void stubEventMeta(String status, String scoreboardVisibility) {
+        Query readyQuery = mock(Query.class);
         when(entityManager.createNativeQuery(contains("from murise.events"))).thenReturn(query);
         when(query.setParameter(eq("eventId"), eq(eventId))).thenReturn(query);
         when(query.getResultList()).thenReturn(List.<Object[]>of(new Object[]{status, scoreboardVisibility}));
+        when(entityManager.createNativeQuery(contains("event_team_readiness"))).thenReturn(readyQuery);
+        when(readyQuery.setParameter(eq("eventId"), eq(eventId))).thenReturn(readyQuery);
+        when(readyQuery.getResultList()).thenReturn(List.of());
     }
 
     @Test

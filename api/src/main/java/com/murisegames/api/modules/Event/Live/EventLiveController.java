@@ -79,4 +79,35 @@ public class EventLiveController {
                         HttpStatus.OK.value()
                 ));
     }
+
+    @PostMapping("/state/ready")
+    public ResponseEntity<CustomApiResponse<EventSnapshotResponse>> setReady(
+            @PathVariable UUID eventId,
+            @Valid @RequestBody TeamReadyRequest request,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID actorId = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().cachePrivate())
+                .body(CustomApiResponse.success(
+                        liveService.setTeamReady(eventId, request.teamId(), request.ready(), actorId),
+                        "Team readiness updated.",
+                        HttpStatus.OK.value()
+                ));
+    }
+
+    @PostMapping("/state/reset")
+    public ResponseEntity<CustomApiResponse<EventSnapshotResponse>> reset(
+            @PathVariable UUID eventId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UUID actorId = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().cachePrivate())
+                .body(CustomApiResponse.success(
+                        liveService.resetState(eventId, actorId),
+                        "Event state reset.",
+                        HttpStatus.OK.value()
+                ));
+    }
 }

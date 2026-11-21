@@ -29,4 +29,17 @@ export const EventLiveService = {
       `/api/v1/events/${encodeURIComponent(eventId)}/state/resume`
     );
   },
+
+  setReady(eventId: string, teamId: string, ready: boolean) {
+    return ApiService.post<EventSnapshotResponse>(
+      `/api/v1/events/${encodeURIComponent(eventId)}/state/ready`,
+      { teamId, ready }
+    );
+  },
+
+  reset(eventId: string) {
+    return ApiService.post<EventSnapshotResponse>(
+      `/api/v1/events/${encodeURIComponent(eventId)}/state/reset`
+    );
+  },
 };
