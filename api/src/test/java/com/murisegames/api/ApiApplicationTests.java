@@ -16,6 +16,9 @@ import com.murisegames.api.modules.Event.Scoring.ScoreboardSnapshotRowRepository
 import com.murisegames.api.modules.Event.Team.TeamRepository;
 import com.murisegames.api.modules.User.PlatformRoleGrantRepository;
 import com.murisegames.api.modules.User.UserRepository;
+import com.murisegames.api.modules.Audit.AuditEventRepository;
+import com.murisegames.api.modules.Picture.MediaAssetRepository;
+import com.murisegames.api.modules.Picture.PictureRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -78,6 +81,15 @@ class ApiApplicationTests {
 
     @MockitoBean
     private ScoreboardSnapshotRowRepository scoreboardSnapshotRowRepository;
+
+    @MockitoBean
+    private AuditEventRepository auditEventRepository;
+
+    @MockitoBean
+    private PictureRepository pictureRepository;
+
+    @MockitoBean
+    private MediaAssetRepository mediaAssetRepository;
 
     @Test
     void contextLoads() {

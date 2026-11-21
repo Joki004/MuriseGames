@@ -27,6 +27,8 @@ public interface EventMembershipRepository
             @Param("userId") UUID userId
     );
 
+    List<EventMembership> findByEventIdOrderByCreatedAtAsc(UUID eventId);
+
     Optional<EventMembership> findByEventIdAndUserId(
             UUID eventId,
             UUID userId

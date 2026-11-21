@@ -10,6 +10,7 @@ import { JoinRequestPanel } from "./JoinRequest/JoinRequestPanel";
 import { InvitePanel } from "./Invite/InvitePanel";
 import { EventGamePanel } from "./EventGame/EventGamePanel";
 import { ScoreboardPanel } from "./Scoring/ScoreboardPanel";
+import { EventRolePanel } from "./Role/EventRolePanel";
 import { AsyncContent } from "@/component/ui/AsyncContent";
 import { ParticipantController } from "@/modules/Event/Participant";
 import {
@@ -225,6 +226,7 @@ export function EventPeople() {
         canManage={canManage}
         refreshTrigger={rosterRevision}
       />
+      {canManage && <EventRolePanel eventId={event.id} />}
     </div>
   );
 }
