@@ -49,4 +49,7 @@ public class MediaAsset {
             updatable = false
     )
     private Instant createdAt;
+
+    @Column(nullable = false, columnDefinition = "text")
+    private String visibility = "private";
 }

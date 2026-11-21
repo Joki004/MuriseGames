@@ -17,10 +17,12 @@ public interface MediaAssetRepository extends JpaRepository<MediaAsset, UUID> {
     @Query("select asset from MediaAsset asset where asset.id = :id")
     Optional<MediaAsset> lockById(@Param("id") UUID id);
 
+    Optional<MediaAsset> findByIdAndEventId(UUID id, UUID eventId);
+
     @Query(value = """
             select id
             from murise.media_assets
-            where purpose = 'picture'
+            where purpose in ('picture', 'event_media')
               and (
                   status in ('failed', 'delete_pending')
                   or (status = 'pending' and created_at < :staleBefore)
@@ -31,4 +33,6 @@ public interface MediaAssetRepository extends JpaRepository<MediaAsset, UUID> {
     List<UUID> findCleanupCandidates(
             @Param("staleBefore") Instant staleBefore
     );
+
+
 }

@@ -47,14 +47,18 @@ public class SupabasePictureStorage {
     }
 
     public void upload(String path, byte[] bytes) {
+        upload(path, bytes, MediaType.IMAGE_JPEG);
+    }
+
+    public void upload(String path, byte[] bytes, MediaType contentType) {
         validatePath(path);
 
         try {
             client.post()
                     .uri("/object/{bucket}/{path}", BUCKET, path)
-                    .contentType(MediaType.IMAGE_JPEG)
+                    .contentType(contentType)
                     .header("x-upsert", "false")
-                    .header(HttpHeaders.CACHE_CONTROL, "max-age=60")
+                    .header(HttpHeaders.CACHE_CONTROL, "private, max-age=60")
                     .body(bytes)
                     .retrieve()
                     .toBodilessEntity();
@@ -104,8 +108,8 @@ public class SupabasePictureStorage {
     }
 
     private void validatePath(String path) {
-        if (path == null || !path.matches("[0-9a-f-]{36}\\.jpg")) {
-            throw new IllegalStateException("Invalid stored picture path.");
+        if (path == null || !path.matches("[0-9a-f-]{36}\\.(jpg|png|webp|gif)")) {
+            throw new IllegalStateException("Invalid stored media path.");
         }
     }
 
