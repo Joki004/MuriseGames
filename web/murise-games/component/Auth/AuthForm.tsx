@@ -1,8 +1,17 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthController } from "@/modules/Auth/auth.controller";
+import {
+  Alert,
+  Button,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+} from "@/component/ui";
 
 type AuthMode = "login" | "signup" | "recovery";
 
@@ -10,8 +19,29 @@ interface AuthFormProps {
   returnTo?: "/dashboard" | "/join";
 }
 
+const modes: Array<{ value: AuthMode; label: string }> = [
+  { value: "login", label: "Sign in" },
+  { value: "signup", label: "Sign up" },
+  { value: "recovery", label: "Recover" },
+];
+
+const titles: Record<AuthMode, string> = {
+  login: "Welcome back",
+  signup: "Create your account",
+  recovery: "Recover your account",
+};
+
+const descriptions: Record<AuthMode, string> = {
+  login: "Sign in to organize or join your next game night.",
+  signup: "Choose a name your friends will recognize.",
+  recovery: "Request an email link to reset your password.",
+};
+
 export function AuthForm({ returnTo = "/dashboard" }: AuthFormProps) {
   const router = useRouter();
+  const titleId = useId();
+  const busy = useRef(false);
+
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,12 +53,18 @@ export function AuthForm({ returnTo = "/dashboard" }: AuthFormProps) {
   } | null>(null);
 
   function switchMode(nextMode: AuthMode) {
+    if (busy.current) return;
+
     setMode(nextMode);
+    setPassword("");
     setMessage(null);
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy.current) return;
+
+    busy.current = true;
     setSubmitting(true);
     setMessage(null);
 
@@ -46,152 +82,139 @@ export function AuthForm({ returnTo = "/dashboard" }: AuthFormProps) {
           displayName,
           returnTo,
         );
+
         if (result.requiresEmailConfirmation) {
           setMessage({
             type: "success",
-            text: "Account created. Check your email for the confirmation link.",
+            text: "Check your email to confirm your account.",
           });
         } else {
           router.replace(returnTo);
         }
+
         return;
       }
 
       await AuthController.requestPasswordRecovery(email);
+
       setMessage({
         type: "success",
-        text: "Recovery link sent. Check your inbox to reset your password.",
+        text: "If an account uses this email, you’ll receive a password-reset link.",
       });
-    } catch (err) {
+    } catch (error: unknown) {
       setMessage({
         type: "error",
-        text: err instanceof Error ? err.message : "Authentication failed.",
+        text: error instanceof Error ? error.message : "Authentication failed.",
       });
     } finally {
+      busy.current = false;
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
-          MuriseGames
-        </p>
-        <h1 className="mt-1 text-2xl font-bold text-zinc-100">
-          {mode === "login" && "Sign in to your account"}
-          {mode === "signup" && "Create your account"}
-          {mode === "recovery" && "Reset your password"}
-        </h1>
-      </div>
+    <Card className="w-full max-w-md" aria-labelledby={titleId}>
+      <CardHeader>
+        <p className="ui-eyebrow">MuriseGames</p>
+        <CardTitle
+          id={titleId}
+          as={returnTo === "/join" ? "h2" : "h1"}
+          className="text-2xl sm:text-3xl"
+        >
+          {titles[mode]}
+        </CardTitle>
+        <CardDescription>{descriptions[mode]}</CardDescription>
+      </CardHeader>
 
-      <div className="mb-6 grid grid-cols-3 gap-1 rounded-lg bg-zinc-950 p-1 text-xs font-medium">
-        {(["login", "signup", "recovery"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => switchMode(tab)}
-            className={`rounded-md py-2 capitalize transition ${
-              mode === tab
-                ? "bg-zinc-800 text-zinc-100"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
+      <div
+        role="group"
+        aria-label="Account action"
+        className="mb-6 grid grid-cols-3 gap-2"
+      >
+        {modes.map((item) => (
+          <Button
+            key={item.value}
+            variant="secondary"
+            className="ui-mode-button"
+            aria-pressed={mode === item.value}
+            disabled={submitting}
+            onClick={() => switchMode(item.value)}
           >
-            {tab === "recovery" ? "Recover" : tab}
-          </button>
+            {item.label}
+          </Button>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {mode === "signup" && (
-          <div>
-            <label
-              htmlFor="displayName"
-              className="block text-sm font-medium text-zinc-300"
-            >
-              Display Name
-            </label>
-            <input
-              id="displayName"
-              type="text"
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <fieldset disabled={submitting} className="space-y-5">
+          {mode === "signup" && (
+            <Input
+              label="Display name"
+              name="displayName"
+              autoComplete="nickname"
               required
               maxLength={80}
-              placeholder="e.g. Joram"
+              placeholder="How should we call you?"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              onChange={(event) => setDisplayName(event.target.value)}
             />
-          </div>
-        )}
+          )}
 
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-zinc-300"
-          >
-            Email
-          </label>
-          <input
-            id="email"
+          <Input
+            label="Email"
+            name="email"
             type="email"
             required
             autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="you@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+            onChange={(event) => setEmail(event.target.value)}
           />
-        </div>
 
-        {mode !== "recovery" && (
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-zinc-300"
-            >
-              Password
-            </label>
-            <input
-              id="password"
+          {mode !== "recovery" && (
+            <Input
+              label="Password"
+              name="password"
               type="password"
               required
               minLength={6}
               autoComplete={
                 mode === "login" ? "current-password" : "new-password"
               }
+              hint={mode === "signup" ? "At least 6 characters." : undefined}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              onChange={(event) => setPassword(event.target.value)}
             />
-          </div>
-        )}
+          )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
-        >
-          {submitting
-            ? "Please wait..."
-            : mode === "login"
-              ? "Sign In"
+          <Button
+            type="submit"
+            fullWidth
+            loading={submitting}
+            loadingText={
+              mode === "login"
+                ? "Signing in…"
+                : mode === "signup"
+                  ? "Creating account…"
+                  : "Sending link…"
+            }
+          >
+            {mode === "login"
+              ? "Sign in"
               : mode === "signup"
-                ? "Create Account"
-                : "Send Recovery Email"}
-        </button>
+                ? "Create account"
+                : "Send recovery link"}
+          </Button>
+        </fieldset>
 
         {message && (
-          <p
-            className={`rounded-lg border px-3 py-2 text-sm ${
-              message.type === "success"
-                ? "border-emerald-800 bg-emerald-950/50 text-emerald-300"
-                : "border-rose-800 bg-rose-950/50 text-rose-300"
-            }`}
-          >
+          <Alert tone={message.type}>
             {message.text}
-          </p>
+          </Alert>
         )}
       </form>
-    </div>
+    </Card>
   );
 }

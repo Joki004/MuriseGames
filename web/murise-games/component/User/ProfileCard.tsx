@@ -1,94 +1,151 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { UserController } from "@/modules/User/user.controller";
 import type { UserResponse } from "@/modules/User/user.type";
+import {
+  Alert,
+  Button,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  Input,
+} from "@/component/ui";
 
 interface ProfileCardProps {
   initialDisplayName: string;
   onUpdated: (profile: UserResponse) => void;
 }
 
-export function ProfileCard({ initialDisplayName, onUpdated }: ProfileCardProps) {
+export function ProfileCard({
+  initialDisplayName,
+  onUpdated,
+}: ProfileCardProps) {
+  const titleId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const busy = useRef(false);
+
+  const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent) {
+  function startEditing() {
+    setDisplayName(initialDisplayName);
+    setError(null);
+    setSuccess(null);
+    setOpen(true);
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy.current) return;
+
+    busy.current = true;
     setSaving(true);
-    setFeedback(null);
+    setError(null);
 
     try {
       const updated = await UserController.updateDisplayName(displayName);
-      setDisplayName(updated.displayName);
+
       onUpdated(updated);
-      setFeedback({
-        type: "success",
-        text: "Display name saved to murise.profiles.",
-      });
-    } catch (err) {
-      setFeedback({
-        type: "error",
-        text:
-          err instanceof Error
-            ? err.message
-            : "Failed to update display name.",
-      });
+      setDisplayName(updated.displayName);
+      setSuccess("Your display name has been updated.");
+      setOpen(false);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Could not update your name.",
+      );
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   }
 
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <h2 className="text-lg font-semibold text-zinc-100">
-        Profile Settings{" "}
-        <span className="text-xs font-normal text-zinc-400">
-          PATCH /api/users/me
-        </span>
-      </h2>
+    <>
+      <Card aria-labelledby={titleId}>
+        <CardHeader>
+          <CardTitle id={titleId}>Your profile</CardTitle>
+          <CardDescription>
+            The name other players see during your game nights.
+          </CardDescription>
+        </CardHeader>
 
-      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-        <div>
-          <label
-            htmlFor="displayName"
-            className="block text-sm font-medium text-zinc-300"
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm text-muted">Display name</p>
+            <p className="mt-1 break-words text-lg font-semibold">
+              {initialDisplayName}
+            </p>
+          </div>
+
+          <Button
+            variant="secondary"
+            onClick={startEditing}
+            className="sm:shrink-0"
           >
-            Display Name
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            maxLength={80}
-            required
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-          />
+            Edit name
+          </Button>
         </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Update Display Name"}
-        </button>
-
-        {feedback && (
-          <p
-            className={`text-sm ${
-              feedback.type === "success" ? "text-emerald-400" : "text-rose-400"
-            }`}
-          >
-            {feedback.text}
-          </p>
+        {success && (
+          <Alert tone="success" className="mt-5">
+            {success}
+          </Alert>
         )}
-      </form>
-    </section>
+      </Card>
+
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Edit your display name"
+        description="Choose a name your friends will recognize."
+        busy={saving}
+        initialFocusRef={inputRef}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <fieldset disabled={saving} className="space-y-5">
+            <Input
+              ref={inputRef}
+              label="Display name"
+              name="displayName"
+              required
+              maxLength={80}
+              autoComplete="nickname"
+              hint="Up to 80 characters."
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+            />
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="submit"
+                loading={saving}
+                loadingText="Saving…"
+                disabled={
+                  !displayName.trim() ||
+                  displayName.trim() === initialDisplayName
+                }
+              >
+                Save changes
+              </Button>
+            </div>
+          </fieldset>
+
+          {error && <Alert tone="error">{error}</Alert>}
+        </form>
+      </Dialog>
+    </>
   );
 }

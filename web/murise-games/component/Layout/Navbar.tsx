@@ -20,12 +20,12 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
-      <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+      <nav className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-6 gap-y-2">
           <Link
             href={session ? "/dashboard" : "/login"}
-            className="text-sm font-bold tracking-wider text-emerald-400"
+            className="text-sm font-bold tracking-wider text-highlight"
           >
             MURISEGAMES
           </Link>
@@ -40,8 +40,8 @@ export function Navbar() {
                     href={link.href}
                     className={`rounded-md px-2.5 py-1 text-sm transition ${
                       active
-                        ? "bg-zinc-800 font-medium text-zinc-100"
-                        : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                        ? "bg-surface-raised font-medium text-foreground"
+                        : "text-muted hover:bg-surface-raised hover:text-foreground"
                     }`}
                   >
                     {link.label}
@@ -55,22 +55,19 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {session ? (
             <>
-              <span className="hidden text-xs text-zinc-400 sm:inline">
+              <span className="hidden text-xs text-muted sm:inline">
                 {account?.displayName ?? session.user.email}
               </span>
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
-                className="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+                className="ui-button ui-button--secondary"
               >
                 Sign Out
               </button>
             </>
           ) : (
-            <Link
-              href="/login"
-              className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-500"
-            >
+            <Link href="/login" className="ui-button ui-button--primary">
               Sign In
             </Link>
           )}
