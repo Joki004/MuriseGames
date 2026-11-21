@@ -76,8 +76,11 @@ public class ScoringService {
                 ? request.sourceKey().trim()
                 : "manual:" + UUID.randomUUID();
 
-        if (scoreEntryRepository.existsByEventIdAndSourceKey(eventId, sourceKey)) {
-            throw new IllegalStateException("Duplicate score entry sourceKey.");
+        var existing = scoreEntryRepository.findByEventIdAndSourceKey(eventId, sourceKey);
+        if (existing.isPresent()) {
+            ScoreEntry recorded = existing.get();
+            boolean isReversed = scoreEntryRepository.existsByReversesEntryId(recorded.getId());
+            return toEntryResponse(recorded, team, isReversed);
         }
 
         ScoreEntry entry = new ScoreEntry();
