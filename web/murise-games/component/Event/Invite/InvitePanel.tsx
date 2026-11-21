@@ -16,22 +16,7 @@ const inputClass =
   "px-3 py-2 text-sm text-zinc-100";
 
 export function InvitePanel({ eventId }: { eventId: string }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <section className="mt-5 border-t border-zinc-800 pt-4">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className={buttonClass}
-      >
-        {open ? "Hide invitations" : "Manage invitations"}
-      </button>
-
-      {open && <InviteManager key={eventId} eventId={eventId} />}
-    </section>
-  );
+  return <InviteManager key={eventId} eventId={eventId} />;
 }
 
 function InviteManager({ eventId }: { eventId: string }) {

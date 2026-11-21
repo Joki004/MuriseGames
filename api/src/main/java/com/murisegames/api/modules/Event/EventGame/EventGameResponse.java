@@ -23,7 +23,10 @@ public record EventGameResponse(
         String scoreboardVisibilityOverride,
         Map<String, Object> settingsSnapshot,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Integer rulesVersion,
+        String rulesMarkdown,
+        String endGameScoringSummary
 ) {
 
     public static EventGameResponse from(
@@ -47,7 +50,13 @@ public record EventGameResponse(
                 eg.getScoreboardVisibilityOverride(),
                 eg.getSettingsSnapshot(),
                 eg.getCreatedAt(),
-                eg.getUpdatedAt()
+                eg.getUpdatedAt(),
+                ver != null && "published".equals(ver.getStatus())
+                        ? ver.getVersion() : null,
+                ver != null && "published".equals(ver.getStatus())
+                        ? ver.getRulesMarkdown() : null,
+                ver != null && "published".equals(ver.getStatus())
+                        ? ver.getEndGameScoringSummary() : null
         );
     }
 }

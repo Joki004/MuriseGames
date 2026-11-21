@@ -12,20 +12,33 @@ import {
   type EventGameResponse,
   type EventGameStatus,
 } from "@/modules/Event/EventGame";
-
+import { Badge } from "@/component/ui";
+import { Rules } from "@/component/Games/Rules";
 interface EventGamePanelProps {
   eventId: string;
 }
 
-const STATUSES: EventGameStatus[] = ["scheduled", "active", "settled", "voided"];
+const STATUSES: EventGameStatus[] = [
+  "scheduled",
+  "active",
+  "settled",
+  "voided",
+];
 
-export function EventGamePanel({ eventId }: EventGamePanelProps) {
+interface EventGamePanelProps {
+  eventId: string;
+  canManage?: boolean;
+}
+
+export function EventGamePanel({
+  eventId,
+  canManage = false,
+}: EventGamePanelProps) {
   const [lineup, setLineup] = useState<EventGameResponse[]>([]);
   const [catalog, setCatalog] = useState<CatalogGameResponse[]>([]);
   const [selectedDefId, setSelectedDefId] = useState("");
   const [showNewGame, setShowNewGame] = useState(false);
 
-  // Quick-create catalog game fields
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<GameKind>("party");
   const [newMode, setNewMode] = useState<ParticipationMode>("all_teams");
@@ -52,7 +65,9 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
         }
       } catch (err: unknown) {
         if (active) {
-          setError(err instanceof Error ? err.message : "Could not load games.");
+          setError(
+            err instanceof Error ? err.message : "Could not load games.",
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -73,7 +88,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
   }
 
   const availableToAdd = catalog.filter(
-    (c) => !lineup.some((g) => g.gameDefinitionId === c.definitionId)
+    (c) => !lineup.some((g) => g.gameDefinitionId === c.definitionId),
   );
 
   async function handleAddSelected() {
@@ -135,7 +150,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
 
   async function handleStatusChange(
     eventGameId: string,
-    status: EventGameStatus
+    status: EventGameStatus,
   ) {
     setBusy(true);
     setError(null);
@@ -143,9 +158,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
       const updated = await EventGameController.update(eventId, eventGameId, {
         status,
       });
-      setLineup((prev) =>
-        prev.map((g) => (g.id === updated.id ? updated : g))
-      );
+      setLineup((prev) => prev.map((g) => (g.id === updated.id ? updated : g)));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not update status.");
     } finally {
@@ -165,7 +178,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
             onClick={() => setShowNewGame((v) => !v)}
             className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-200 hover:bg-zinc-800"
           >
-            {showNewGame ? "Cancel" : "+ New Game"}
+            {canManage ? "Cancel" : "+ New Game"}
           </button>
           <button
             type="button"
@@ -184,7 +197,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
         </p>
       )}
 
-      {showNewGame && (
+      {canManage && showNewGame && (
         <form
           onSubmit={(e) => void handleQuickCreate(e)}
           className="mt-3 space-y-2 rounded-md border border-zinc-800 bg-zinc-950/70 p-3 text-xs"
@@ -239,7 +252,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
         </form>
       )}
 
-      {availableToAdd.length > 0 && (
+      {canManage && availableToAdd.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           <select
             value={selectedDefId}
@@ -264,9 +277,7 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
         </div>
       )}
 
-      {loading && (
-        <p className="mt-2 text-xs text-zinc-400">Loading lineup…</p>
-      )}
+      {loading && <p className="mt-2 text-xs text-zinc-400">Loading lineup…</p>}
 
       {!loading && lineup.length === 0 && (
         <p className="mt-2 text-xs text-zinc-500">
@@ -289,24 +300,64 @@ export function EventGamePanel({ eventId }: EventGamePanelProps) {
                   {game.kind} · {game.participationMode}
                 </p>
               </div>
-              <select
-                aria-label={`Status for ${game.name}`}
-                value={game.status}
-                disabled={busy}
-                onChange={(e) =>
-                  void handleStatusChange(
-                    game.id,
-                    e.target.value as EventGameStatus
-                  )
-                }
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+              {canManage ? (
+                <select
+                  aria-label={`Status for ${game.name}`}
+                  value={game.status}
+                  disabled={busy}
+                  onChange={(event) =>
+                    void handleStatusChange(
+                      game.id,
+                      event.target.value as EventGameStatus,
+                    )
+                  }
+                  className="ui-control max-w-full sm:w-auto"
+                >
+                  {STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Badge tone={game.status === "active" ? "success" : "neutral"}>
+                  {game.status}
+                </Badge>
+              )}
+
+              <details className="w-full min-w-0 border-t border-border pt-3">
+                <summary className="cursor-pointer py-2 font-medium text-highlight">
+                  Rules for this event
+                  {game.rulesVersion !== null &&
+                    ` · Version ${game.rulesVersion}`}
+                </summary>
+
+                <div className="space-y-5 py-3">
+                  {game.rulesMarkdown ? (
+                    <Rules text={game.rulesMarkdown} />
+                  ) : (
+                    <p className="text-muted">
+                      Published rules are unavailable for this saved version.
+                    </p>
+                  )}
+
+                  {game.endGameScoringSummary && (
+                    <section className="space-y-2">
+                      <h3 className="font-semibold">Scoring</h3>
+                      <Rules text={game.endGameScoringSummary} />
+                    </section>
+                  )}
+
+                  {game.houseRulesNote && (
+                    <section className="space-y-2 rounded-control border border-border bg-surface p-4">
+                      <h3 className="font-semibold text-accent">
+                        House rules for this event
+                      </h3>
+                      <Rules text={game.houseRulesNote} />
+                    </section>
+                  )}
+                </div>
+              </details>
             </li>
           ))}
         </ul>

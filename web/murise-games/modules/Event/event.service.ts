@@ -2,6 +2,7 @@ import { ApiService } from "@/modules/Api/api.service";
 import type { CustomApiResponse } from "@/modules/Api/api.type";
 import type {
   EventCreateRequest,
+  EventDetailResponse,
   EventPage,
   EventResponse,
 } from "./event.type";
@@ -20,6 +21,12 @@ export const EventService = {
     });
 
     return ApiService.get<EventPage>(`/api/events?${query}`);
+  },
+
+  getDetail(eventId: string): Promise<CustomApiResponse<EventDetailResponse>> {
+    return ApiService.get<EventDetailResponse>(
+      `/api/events/${encodeURIComponent(eventId)}`,
+    );
   },
 
   updateStatus(eventId: string, status: string) {

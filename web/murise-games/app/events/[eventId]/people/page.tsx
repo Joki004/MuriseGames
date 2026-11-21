@@ -1,0 +1,1 @@
+export { EventPeople as default } from "@/component/Event/EventPages";

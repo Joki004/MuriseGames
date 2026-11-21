@@ -15,6 +15,11 @@ export interface EventResponse {
   updatedAt: string;
 }
 
+export interface EventDetailResponse {
+  event: EventResponse;
+  roles: string[];
+}
+
 export interface EventCreateRequest {
   name: string;
   theme: string | null;

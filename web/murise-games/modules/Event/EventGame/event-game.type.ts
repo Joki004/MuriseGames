@@ -17,6 +17,9 @@ export interface EventGameResponse {
   settingsSnapshot: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  rulesVersion: number | null;
+  rulesMarkdown: string | null;
+  endGameScoringSummary: string | null;
 }
 
 export interface EventGameAddRequest {

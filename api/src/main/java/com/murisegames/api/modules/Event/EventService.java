@@ -17,7 +17,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.murisegames.api.modules.Event.Membership.EventMembershipService;
+import jakarta.persistence.EntityNotFoundException;
 
+import java.util.Set;
 import java.time.ZoneId;
 import java.util.UUID;
 
@@ -30,6 +33,7 @@ public class EventService {
     private final EventRoleGrantRepository roleGrantRepository;
     private final UserService userService;
     private final EntityManager entityManager;
+    private final EventMembershipService membershipService;
 
     @Transactional
     public EventResponse create(Jwt jwt, EventCreateRequest request) {
@@ -100,6 +104,24 @@ public class EventService {
         return eventRepository
                 .findAccessibleEvents(userId, pagination)
                 .map(EventResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public EventDetailResponse getDetail(Jwt jwt, UUID eventId) {
+        UUID userId = userService.extractUserId(jwt);
+
+        // Check membership before looking up the event.
+        Set<String> roles = membershipService.requireAccess(eventId, userId);
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Event not found.")
+                );
+
+        return new EventDetailResponse(
+                EventResponse.from(event),
+                roles
+        );
     }
 
     private String optionalText(String value) {

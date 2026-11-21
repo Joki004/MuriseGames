@@ -1,0 +1,1 @@
+export { EventGames as default } from "@/component/Event/EventPages";

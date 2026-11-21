@@ -6,30 +6,30 @@ import type {
   EventResponse,
   EventVisibility,
 } from "@/modules/Event/event.type";
+import { Alert, Button, Input, Select } from "@/component/ui";
 
 interface EventCreateFormProps {
   onCreated: (event: EventResponse) => void;
+  onBusyChange?: (busy: boolean) => void;
 }
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 " +
-  "text-sm text-zinc-100 outline-none focus:border-emerald-500";
-
-export function EventCreateForm({ onCreated }: EventCreateFormProps) {
-  const submittingRef = useRef(false);
-  const [submitting, setSubmitting] = useState(false);
+export function EventCreateForm({
+  onCreated,
+  onBusyChange,
+}: EventCreateFormProps) {
+  const busy = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy.current) return;
 
-    if (submittingRef.current) return;
+    const fields = new FormData(event.currentTarget);
 
-    const form = event.currentTarget;
-    const fields = new FormData(form);
-
-    submittingRef.current = true;
-    setSubmitting(true);
+    busy.current = true;
+    setSaving(true);
+    onBusyChange?.(true);
     setError(null);
 
     try {
@@ -43,119 +43,79 @@ export function EventCreateForm({ onCreated }: EventCreateFormProps) {
         ) as EventVisibility,
       });
 
-      form.reset();
       onCreated(created);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Could not create the event.",
       );
     } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
+      busy.current = false;
+      setSaving(false);
+      onBusyChange?.(false);
     }
   }
 
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6">
-      <h2 className="text-lg font-semibold">Create an event</h2>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <fieldset disabled={saving} className="space-y-5">
+        <Input
+          label="Event name"
+          name="name"
+          required
+          maxLength={160}
+          placeholder="FOR THE PLOT"
+        />
 
-      <form onSubmit={handleSubmit} className="mt-4">
-        <fieldset disabled={submitting} className="space-y-4">
-          <div>
-            <label htmlFor="event-name" className="text-sm text-zinc-300">
-              Event name
-            </label>
-            <input
-              id="event-name"
-              name="name"
-              required
-              maxLength={160}
-              placeholder="FOR THE PLOT"
-              className={inputClass}
-            />
-          </div>
+        <Input
+          label="Theme — optional"
+          name="theme"
+          maxLength={300}
+          placeholder="Movies and television"
+        />
 
-          <div>
-            <label htmlFor="event-theme" className="text-sm text-zinc-300">
-              Theme — optional
-            </label>
-            <input
-              id="event-theme"
-              name="theme"
-              maxLength={300}
-              placeholder="Movies and television"
-              className={inputClass}
-            />
-          </div>
+        <Input
+          label="Date and time"
+          name="startsAt"
+          type="datetime-local"
+          required
+          step={60}
+          hint="Enter the time in your device’s local timezone. The event displays its saved timezone."
+        />
 
-          <div>
-            <label htmlFor="event-start" className="text-sm text-zinc-300">
-              Date and time
-            </label>
-            <input
-              id="event-start"
-              name="startsAt"
-              type="datetime-local"
-              required
-              step={60}
-              aria-describedby="event-time-help"
-              className={inputClass}
-            />
-            <p id="event-time-help" className="mt-1 text-xs text-zinc-400">
-              Enter the time in your device’s local timezone. The saved
-              timezone appears on the event card.
-            </p>
-          </div>
+        <Input
+          label="Venue — optional"
+          name="venue"
+          maxLength={300}
+        />
 
-          <div>
-            <label htmlFor="event-venue" className="text-sm text-zinc-300">
-              Venue — optional
-            </label>
-            <input
-              id="event-venue"
-              name="venue"
-              maxLength={300}
-              className={inputClass}
-            />
-          </div>
+        <Select
+          label="Joining policy"
+          name="visibility"
+          defaultValue="private"
+          hint="Private events require organizer approval after someone follows an invitation."
+        >
+          <option value="private">Private — organizer approval</option>
+          <option value="public">Public — automatic admission</option>
+        </Select>
 
-          <div>
-            <label htmlFor="event-visibility" className="text-sm text-zinc-300">
-              Joining policy
-            </label>
-            <select
-              id="event-visibility"
-              name="visibility"
-              defaultValue="private"
-              className={inputClass}
-            >
-              <option value="private">Private — organizer approval</option>
-              <option value="public">Public — automatic admission</option>
-            </select>
-            <p className="mt-1 text-xs text-zinc-400">
-              Saved for the invitation flow, which is being added next.
-            </p>
-          </div>
+        <Button
+          type="submit"
+          fullWidth
+          loading={saving}
+          loadingText="Creating event…"
+        >
+          Create event
+        </Button>
+      </fieldset>
 
-          <button
-            type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold
-              text-white hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {submitting ? "Creating…" : "Create event"}
-          </button>
-        </fieldset>
-
-        {error && (
-          <div role="alert" className="mt-4 text-sm text-rose-300">
-            <p>{error}</p>
-            <p className="mt-1 text-xs">
-              If the connection failed, refresh your events before retrying
-              to check whether the event was saved.
-            </p>
-          </div>
-        )}
-      </form>
-    </section>
+      {error && (
+        <Alert tone="error">
+          <p>{error}</p>
+          <p className="mt-2">
+            If the connection failed, check your events before retrying.
+          </p>
+        </Alert>
+      )}
+    </form>
   );
 }

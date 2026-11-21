@@ -1,0 +1,1 @@
+export { EventInvitations as default } from "@/component/Event/EventPages";

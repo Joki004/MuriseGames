@@ -1,142 +1,192 @@
 "use client";
 
-import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/component/Auth/AuthProvider";
-import { ProfileCard } from "@/component/User/ProfileCard";
-import { EventPanel } from "@/component/Event/EventPanel";
+import { useCallback, useState } from "react";
+import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { PageShell } from "@/component/Layout/PageShell";
+import { EventCreateForm } from "@/component/Event/EventCreateForm";
+import { AsyncContent } from "@/component/ui/AsyncContent";
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  EmptyState,
+} from "@/component/ui";
+import { EventController } from "@/modules/Event/event.controller";
+import type { EventResponse } from "@/modules/Event/event.type";
+
+export function formatEventTime(event: EventResponse) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: event.timezone,
+  }).format(new Date(event.startsAt));
+}
 
 export function DashboardView() {
+  return (
+    <RequireAccount>
+      <DashboardContent />
+    </RequireAccount>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
-  const {
-    session,
-    account,
-    lastRequestId,
-    loading,
-    error,
-    refreshAccount,
-    applyProfileUpdate,
-    signOut,
-  } = useAuth();
+  const [page, setPage] = useState(0);
+  const [revision, setRevision] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !session) {
-      router.replace("/login");
-    }
-  }, [loading, session, router]);
-
-  async function handleSignOut() {
-    await signOut();
-    router.replace("/login");
-  }
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center text-sm text-zinc-400">
-        Verifying Supabase token with Spring Boot...
-      </main>
-    );
-  }
-
-  if (!session) {
-    return null;
-  }
+  const load = useCallback(
+    () => EventController.listMine(page, 12),
+    [page],
+  );
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <header className="flex items-center justify-between border-b border-zinc-800 pb-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
-            MuriseGames
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-zinc-100">
-            {account ? `Welcome, ${account.displayName}` : "Dashboard"}
-          </h1>
-        </div>
+    <PageShell
+      title="Your game nights"
+      description="Plan the next one, revisit an event, or join your friends."
+      action={
+        <Button onClick={() => setCreating(true)}>
+          + Create event
+        </Button>
+      }
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">My events</h2>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void refreshAccount()}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
-          >
-            Re-verify /api/auth/me
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSignOut()}
-            className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-100 hover:bg-zinc-700"
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
+        <Button
+          variant="secondary"
+          onClick={() => setRevision((value) => value + 1)}
+        >
+          Refresh
+        </Button>
+      </div>
 
-      {error && (
-        <div className="mt-6 rounded-xl border border-rose-800 bg-rose-950/50 p-4 text-sm text-rose-200">
-          <p className="font-semibold">Backend verification failed</p>
-          <p className="mt-1">{error}</p>
-        </div>
-      )}
+      <AsyncContent
+        key={`${page}:${revision}`}
+        load={load}
+        label="Loading your events…"
+      >
+        {(result) => (
+          <>
+            {result.content.length === 0 ? (
+              <EmptyState
+                title={
+                  page === 0
+                    ? "Your next game night starts here"
+                    : "No events on this page"
+                }
+                description="Create an event or follow an invitation to join one."
+                action={
+                  <Button onClick={() => setCreating(true)}>
+                    Create event
+                  </Button>
+                }
+              />
+            ) : (
+              <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {result.content.map((event) => (
+                  <li key={event.id} className="min-w-0">
+                    <Card className="flex h-full flex-col gap-5">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          tone={event.status === "live" ? "success" : "accent"}
+                        >
+                          {event.status}
+                        </Badge>
+                        <Badge>{event.visibility}</Badge>
+                      </div>
 
-      {account && (
-        <div className="mt-6 space-y-6">
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6">
-            <h2 className="text-lg font-semibold text-zinc-100">
-              Resolved Account{" "}
-              <span className="text-xs font-normal text-zinc-400">
-                GET /api/auth/me
-              </span>
-            </h2>
+                      <div className="min-w-0">
+                        <h3 className="break-words text-xl font-semibold">
+                          <Link
+                            href={`/events/${event.id}`}
+                            className="hover:text-highlight"
+                          >
+                            {event.name}
+                          </Link>
+                        </h3>
 
-            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-zinc-400">User ID (Supabase sub)</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs text-zinc-200">
-                  {account.id}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-400">Email</dt>
-                <dd className="mt-0.5 text-zinc-200">{account.email ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-400">DB Platform Roles</dt>
-                <dd className="mt-0.5 text-zinc-200">
-                  {account.platformRoles.length > 0
-                    ? account.platformRoles.join(", ")
-                    : "USER (no elevated grants)"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-400">Last X-Request-ID</dt>
-                <dd className="mt-0.5 break-all font-mono text-xs text-zinc-400">
-                  {lastRequestId ?? "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-400">Profile Created</dt>
-                <dd className="mt-0.5 text-xs text-zinc-300">
-                  {account.createdAt}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-400">Profile Updated</dt>
-                <dd className="mt-0.5 text-xs text-zinc-300">
-                  {account.updatedAt}
-                </dd>
-              </div>
-            </dl>
-          </section>
+                        {event.theme && (
+                          <p className="mt-2 break-words text-muted">
+                            {event.theme}
+                          </p>
+                        )}
+                      </div>
 
-          <ProfileCard
-            initialDisplayName={account.displayName}
-            onUpdated={applyProfileUpdate}
+                      <div className="space-y-1 text-sm text-muted">
+                        <p>
+                          <time dateTime={event.startsAt}>
+                            {formatEventTime(event)}
+                          </time>
+                        </p>
+                        <p>{event.timezone}</p>
+                        {event.venue && (
+                          <p className="break-words">{event.venue}</p>
+                        )}
+                      </div>
+
+                      <Link
+                        href={`/events/${event.id}`}
+                        className="ui-button ui-button--secondary mt-auto"
+                      >
+                        Open event
+                      </Link>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <footer className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-sm text-muted">
+                {result.page.totalElements} event(s)
+                {result.page.totalPages > 0 &&
+                  ` · Page ${result.page.number + 1} of ${result.page.totalPages}`}
+              </p>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  disabled={page === 0}
+                  onClick={() => setPage((value) => value - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={page + 1 >= result.page.totalPages}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </footer>
+          </>
+        )}
+      </AsyncContent>
+
+      <Dialog
+        open={creating}
+        onOpenChange={setCreating}
+        title="Create an event"
+        description="Give your next game night a name and a date."
+        busy={saving}
+      >
+        {creating && (
+          <EventCreateForm
+            onBusyChange={setSaving}
+            onCreated={(event) => {
+              setCreating(false);
+              router.push(`/events/${event.id}`);
+            }}
           />
-
-          <EventPanel key={account.id} />
-        </div>
-      )}
-    </main>
+        )}
+      </Dialog>
+    </PageShell>
   );
 }

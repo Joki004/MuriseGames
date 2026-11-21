@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import java.util.UUID;
 
 @Tag(name = "Events", description = "Event creation and membership-scoped listing")
 @RestController
@@ -50,6 +51,19 @@ public class EventController {
         return ResponseEntity.ok(CustomApiResponse.success(
                 response,
                 "Events retrieved.",
+                HttpStatus.OK.value()
+        ));
+    }
+
+    @Operation(summary = "Get an accessible event and current event roles")
+    @GetMapping("/{eventId}")
+    public ResponseEntity<CustomApiResponse<EventDetailResponse>> getDetail(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId
+    ) {
+        return ResponseEntity.ok(CustomApiResponse.success(
+                eventService.getDetail(jwt, eventId),
+                "Event retrieved.",
                 HttpStatus.OK.value()
         ));
     }

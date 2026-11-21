@@ -1,42 +1,27 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { TeamController } from "@/modules/Event/Team/team.controller";
 import type {
   TeamListResponse,
   TeamResponse,
 } from "@/modules/Event/Team/team.type";
 import { TeamForm } from "./TeamForm";
-import { InvitePanel } from "@/component/Event/Invite/InvitePanel";
 
 const buttonClass =
   "rounded-lg border border-zinc-700 px-3 py-1.5 text-sm " +
   "text-zinc-200 hover:bg-zinc-800 disabled:opacity-40";
 
-export function TeamPanel({ eventId }: { eventId: string }) {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
-
-  return (
-    <div className="mt-4 border-t border-zinc-800 pt-3">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
-        className={buttonClass}
-      >
-        {open ? "Hide teams" : "Teams"}
-      </button>
-
-      <div id={panelId}>
-        {open && <TeamContent key={eventId} eventId={eventId} />}
-      </div>
-    </div>
-  );
+interface TeamPanelProps {
+  eventId: string;
+  onChanged?: () => void;
 }
 
-function TeamContent({ eventId }: { eventId: string }) {
+export function TeamPanel({ eventId, onChanged }: TeamPanelProps) {
+  return <TeamContent key={eventId} eventId={eventId} onChanged={onChanged} />;
+}
+
+function TeamContent({ eventId, onChanged }: TeamPanelProps) {
   const [result, setResult] = useState<TeamListResponse | null>(null);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -53,7 +38,9 @@ function TeamContent({ eventId }: { eventId: string }) {
         if (active) setResult(response);
       } catch (err: unknown) {
         if (active) {
-          setError(err instanceof Error ? err.message : "Could not load teams.");
+          setError(
+            err instanceof Error ? err.message : "Could not load teams.",
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -78,6 +65,7 @@ function TeamContent({ eventId }: { eventId: string }) {
   function saved(team: TeamResponse) {
     setMessage(`Saved ${team.name}.`);
     reload();
+    onChanged?.();
   }
 
   return (
@@ -175,7 +163,6 @@ function TeamContent({ eventId }: { eventId: string }) {
               ))}
             </ul>
           )}
-          {result.canManage && <InvitePanel eventId={eventId} />}
         </>
       )}
     </section>

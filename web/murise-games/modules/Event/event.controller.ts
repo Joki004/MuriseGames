@@ -4,6 +4,7 @@ import type {
   EventCreateInput,
   EventPage,
   EventResponse,
+  EventDetailResponse,
 } from "./event.type";
 
 function optionalText(value: string): string | null {
@@ -88,6 +89,22 @@ export const EventController = {
     } catch (error: unknown) {
       throw new Error(
         extractApiErrorMessage(error, "Could not load your events."),
+      );
+    }
+  },
+
+  async getDetail(eventId: string): Promise<EventDetailResponse> {
+    try {
+      const response = await EventService.getDetail(eventId);
+
+      if (!response.data) {
+        throw new Error("The server returned an empty event payload.");
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not open this event."),
       );
     }
   },

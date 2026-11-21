@@ -10,14 +10,16 @@ import {
 interface ParticipantPanelProps {
   eventId: string;
   refreshTrigger?: number;
+  canManage?: boolean;
 }
 
 export function ParticipantPanel({
   eventId,
   refreshTrigger = 0,
+  canManage = false,
 }: ParticipantPanelProps) {
   const [participants, setParticipants] = useState<EventParticipantResponse[]>(
-    []
+    [],
   );
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -41,7 +43,9 @@ export function ParticipantPanel({
         }
       } catch (err: unknown) {
         if (active) {
-          setError(err instanceof Error ? err.message : "Could not load roster.");
+          setError(
+            err instanceof Error ? err.message : "Could not load roster.",
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -68,14 +72,14 @@ export function ParticipantPanel({
       const updated = await ParticipantController.assignTeam(
         eventId,
         participantId,
-        nextTeamId || null
+        nextTeamId || null,
       );
       setParticipants((prev) =>
-        prev.map((p) => (p.id === updated.id ? updated : p))
+        prev.map((p) => (p.id === updated.id ? updated : p)),
       );
     } catch (err: unknown) {
       setError(
-        err instanceof Error ? err.message : "Could not reassign participant."
+        err instanceof Error ? err.message : "Could not reassign participant.",
       );
     } finally {
       setSavingId(null);
@@ -98,9 +102,7 @@ export function ParticipantPanel({
         </button>
       </div>
 
-      {loading && (
-        <p className="mt-2 text-xs text-zinc-400">Loading roster…</p>
-      )}
+      {loading && <p className="mt-2 text-xs text-zinc-400">Loading roster…</p>}
 
       {error && (
         <p role="alert" className="mt-2 text-xs text-rose-300">
@@ -126,22 +128,56 @@ export function ParticipantPanel({
                 <p className="text-xs text-zinc-500">{participant.status}</p>
               </div>
 
-              <select
-                aria-label={`Team for ${participant.displayName}`}
-                value={participant.teamId ?? ""}
-                disabled={savingId === participant.id}
-                onChange={(e) =>
-                  void handleTeamChange(participant.id, e.target.value)
-                }
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 disabled:opacity-50"
-              >
-                <option value="">Unassigned</option>
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
+              {canManage ? (
+                <select
+                  aria-label={`Team for ${participant.displayName}`}
+                  value={participant.teamId ?? ""}
+                  disabled={savingId === participant.id}
+                  onChange={(event) =>
+                    void handleTeamChange(participant.id, event.target.value)
+                  }
+                  className="ui-control max-w-full sm:w-auto"
+                >
+                  <option value="">Unassigned</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm text-muted">
+                  {participant.teamId
+                    ? (teams.find((team) => team.id === participant.teamId)
+                        ?.name ?? "Team unavailable")
+                    : "Unassigned"}
+                </span>
+              )}
+              {canManage ? (
+                <select
+                  aria-label={`Team for ${participant.displayName}`}
+                  value={participant.teamId ?? ""}
+                  disabled={savingId === participant.id}
+                  onChange={(event) =>
+                    void handleTeamChange(participant.id, event.target.value)
+                  }
+                  className="ui-control max-w-full sm:w-auto"
+                >
+                  <option value="">Unassigned</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm text-muted">
+                  {participant.teamId
+                    ? (teams.find((team) => team.id === participant.teamId)
+                        ?.name ?? "Team unavailable")
+                    : "Unassigned"}
+                </span>
+              )}
             </li>
           ))}
         </ul>
