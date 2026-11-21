@@ -14,7 +14,8 @@ export const AuthController = {
   async signUp(
     email: string,
     password: string,
-    displayName: string
+    displayName: string,
+    returnTo: "/dashboard" | "/join" = "/dashboard",
   ): Promise<SignUpResult> {
     const normalizedEmail = email.trim();
     const normalizedName = displayName.trim();
@@ -29,12 +30,12 @@ export const AuthController = {
       throw new Error("Password must be at least 6 characters.");
     }
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=/dashboard`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnTo)}`;
     return AuthService.signUpWithPassword(
       normalizedEmail,
       password,
       normalizedName,
-      redirectTo
+      redirectTo,
     );
   },
 
@@ -49,7 +50,7 @@ export const AuthController = {
 
   async completePasswordReset(
     newPassword: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<void> {
     if (newPassword.length < 6) {
       throw new Error("Password must be at least 6 characters.");
@@ -65,7 +66,7 @@ export const AuthController = {
   },
 
   async resolveBackendAccount(
-    accessToken?: string
+    accessToken?: string,
   ): Promise<ResolvedAccountResult> {
     try {
       const response = await AuthService.getMe(accessToken);
@@ -78,7 +79,7 @@ export const AuthController = {
       };
     } catch (error: unknown) {
       throw new Error(
-        extractApiErrorMessage(error, "Failed to verify session with backend.")
+        extractApiErrorMessage(error, "Failed to verify session with backend."),
       );
     }
   },

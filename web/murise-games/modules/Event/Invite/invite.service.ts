@@ -3,6 +3,7 @@ import type {
   EventInviteResponse,
   InviteCreatedResponse,
   InviteCreateRequest,
+  InviteRedeemResponse,
 } from "./invite.type";
 
 function basePath(eventId: string): string {
@@ -16,6 +17,12 @@ export const InviteService = {
 
   create(eventId: string, payload: InviteCreateRequest) {
     return ApiService.post<InviteCreatedResponse>(basePath(eventId), payload);
+  },
+
+  redeem(token: string) {
+    return ApiService.post<InviteRedeemResponse>("/api/invites/redeem", {
+      token,
+    });
   },
 
   revoke(eventId: string, inviteId: string) {

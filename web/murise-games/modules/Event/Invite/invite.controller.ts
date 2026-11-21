@@ -3,6 +3,7 @@ import { InviteService } from "./invite.service";
 import type {
   EventInviteResponse,
   InviteCreateRequest,
+  InviteRedeemResponse,
 } from "./invite.type";
 
 export interface CreatedInviteLink {
@@ -56,7 +57,9 @@ export const InviteController = {
         url: url.toString(),
       };
     } catch (error: unknown) {
-      throw new Error(extractApiErrorMessage(error, "Could not create invite."));
+      throw new Error(
+        extractApiErrorMessage(error, "Could not create invite."),
+      );
     }
   },
 
@@ -64,7 +67,25 @@ export const InviteController = {
     try {
       await InviteService.revoke(eventId, inviteId);
     } catch (error: unknown) {
-      throw new Error(extractApiErrorMessage(error, "Could not revoke invite."));
+      throw new Error(
+        extractApiErrorMessage(error, "Could not revoke invite."),
+      );
+    }
+  },
+
+  async redeem(token: string): Promise<InviteRedeemResponse> {
+    try {
+      const response = await InviteService.redeem(token);
+
+      if (!response.data) {
+        throw new Error("Invitation response was empty.");
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not process the invitation."),
+      );
     }
   },
 };

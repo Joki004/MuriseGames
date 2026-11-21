@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { EventController } from "@/modules/Event/event.controller";
-import type {
-  EventPage,
-  EventResponse,
-} from "@/modules/Event/event.type";
+import { JoinRequestPanel } from "@/component/Event/JoinRequest/JoinRequestPanel";
+import { ParticipantPanel } from "@/component/Event/Participant/ParticipantPanel";
+import type { EventPage, EventResponse } from "@/modules/Event/event.type";
 import { EventCreateForm } from "./EventCreateForm";
 import { TeamPanel } from "@/component/Event/Team/TeamPanel";
+import { EventGamePanel } from "@/component/Event/EventGame/EventGamePanel";
+import { ScoreboardPanel } from "@/component/Event/Scoring/ScoreboardPanel";
 const buttonClass =
   "rounded-lg border border-zinc-700 px-3 py-1.5 text-sm " +
   "text-zinc-200 hover:bg-zinc-800 disabled:opacity-40";
@@ -27,7 +28,7 @@ export function EventPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<EventResponse | null>(null);
-
+  const [rosterRevision, setRosterRevision] = useState(0);
   useEffect(() => {
     let active = true;
 
@@ -86,9 +87,7 @@ export function EventPanel() {
           <p className="mt-1">
             Status: {created.status} · Visibility: {created.visibility}
           </p>
-          <p className="mt-1 break-all font-mono text-xs">
-            ID: {created.id}
-          </p>
+          <p className="mt-1 break-all font-mono text-xs">ID: {created.id}</p>
         </div>
       )}
 
@@ -126,7 +125,6 @@ export function EventPanel() {
             ) : (
               <ul className="mt-4 space-y-3">
                 {result.content.map((event) => (
-                    
                   <li
                     key={event.id}
                     className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4"
@@ -153,6 +151,17 @@ export function EventPanel() {
                     </p>
 
                     <TeamPanel eventId={event.id} />
+                    <JoinRequestPanel
+                      eventId={event.id}
+                      onApproved={() => setRosterRevision((value) => value + 1)}
+                    />
+                    <ParticipantPanel
+                      eventId={event.id}
+                      refreshTrigger={rosterRevision}
+                    />
+
+                    <EventGamePanel eventId={event.id} />
+                    <ScoreboardPanel eventId={event.id} />
 
                     {event.venue && (
                       <p className="mt-1 text-sm text-zinc-400">

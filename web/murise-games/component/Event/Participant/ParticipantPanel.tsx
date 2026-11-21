@@ -1,0 +1,135 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import {
+  ParticipantController,
+  type EventParticipantResponse,
+  type TeamOption,
+} from "@/modules/Event/Participant";
+
+interface ParticipantPanelProps {
+  eventId: string;
+  refreshTrigger?: number;
+}
+
+export function ParticipantPanel({
+  eventId,
+  refreshTrigger = 0,
+}: ParticipantPanelProps) {
+  const [participants, setParticipants] = useState<EventParticipantResponse[]>(
+    []
+  );
+  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [roster, activeTeams] = await Promise.all([
+        ParticipantController.list(eventId),
+        ParticipantController.listActiveTeamOptions(eventId),
+      ]);
+      setParticipants(roster);
+      setTeams(activeTeams);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not load roster.");
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    void load();
+  }, [load, refreshTrigger]);
+
+  async function handleTeamChange(participantId: string, nextTeamId: string) {
+    setSavingId(participantId);
+    setError(null);
+    try {
+      const updated = await ParticipantController.assignTeam(
+        eventId,
+        participantId,
+        nextTeamId || null
+      );
+      setParticipants((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p))
+      );
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Could not reassign participant."
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+          Roster ({participants.length})
+        </h4>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300 hover:bg-zinc-800 disabled:opacity-40"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {loading && (
+        <p className="mt-2 text-xs text-zinc-400">Loading roster…</p>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
+
+      {!loading && participants.length === 0 && (
+        <p className="mt-2 text-xs text-zinc-500">No participants yet.</p>
+      )}
+
+      {!loading && participants.length > 0 && (
+        <ul className="mt-2 space-y-2">
+          {participants.map((participant) => (
+            <li
+              key={participant.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm"
+            >
+              <div>
+                <p className="font-medium text-zinc-100">
+                  {participant.displayName}
+                </p>
+                <p className="text-xs text-zinc-500">{participant.status}</p>
+              </div>
+
+              <select
+                aria-label={`Team for ${participant.displayName}`}
+                value={participant.teamId ?? ""}
+                disabled={savingId === participant.id}
+                onChange={(e) =>
+                  void handleTeamChange(participant.id, e.target.value)
+                }
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 disabled:opacity-50"
+              >
+                <option value="">Unassigned</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

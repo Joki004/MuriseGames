@@ -52,14 +52,54 @@
                   - RuntimeConfigurationValidator.class
                   - SecurityConfig.class
                   - SpringDataWebConfig.class
-                - identity
-                  - MeController$CurrentUser.class
-                  - MeController.class
                 - modules
                   - Auth
                     - AuthController.class
                     - AuthResponse.class
                     - AuthService.class
+                  - Event
+                    - dto
+                      - EventCreateRequest.class
+                    - Event.class
+                    - EventController.class
+                    - EventRepository.class
+                    - EventResponse.class
+                    - EventService.class
+                    - Invite
+                      - dto
+                        - InviteCreateRequest.class
+                        - InviteRedeemRequest.class
+                      - EventInvite.class
+                      - EventInviteController.class
+                      - EventInviteRepository.class
+                      - EventInviteResponse.class
+                      - EventInviteService.class
+                      - InviteCreatedResponse.class
+                      - InviteRedeemResponse.class
+                      - InviteRedemptionController.class
+                      - InviteRedemptionLimiter.class
+                      - InviteRedemptionService.class
+                    - JoinRequest
+                      - JoinRequest.class
+                      - JoinRequestRepository.class
+                    - Membership
+                      - EventMembership.class
+                      - EventMembershipRepository.class
+                      - EventMembershipService.class
+                      - EventRoleGrant.class
+                      - EventRoleGrantRepository.class
+                    - Participant
+                      - EventParticipant.class
+                      - EventParticipantRepository.class
+                    - Team
+                      - dto
+                        - TeamSaveRequest.class
+                      - Team.class
+                      - TeamController.class
+                      - TeamListResponse.class
+                      - TeamRepository.class
+                      - TeamResponse.class
+                      - TeamService.class
                   - User
                     - dto
                       - UserUpdateRequest.class
@@ -92,6 +132,11 @@
             - murisegames
               - api
                 - ApiApplicationTests.class
+                - config
+                  - JwtValidationConfigTest.class
+                - modules
+                  - User
+                    - UserServiceTest.class
     - generated
       - sources
         - annotationProcessor
@@ -105,6 +150,20 @@
     - reports
       - problems
         - problems-report.html
+      - tests
+        - test
+          - com.murisegames.api.ApiApplicationTests
+            - index.html
+          - com.murisegames.api.config.JwtValidationConfigTest
+            - index.html
+          - com.murisegames.api.modules.User.UserServiceTest
+            - index.html
+          - css
+            - base-style.css
+            - style.css
+          - index.html
+          - js
+            - report.js
     - resources
       - main
         - application-local.yaml
@@ -114,18 +173,39 @@
           - migration
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
+            - V3__add_murise_app_rls_policies.sql
+            - V4__add_event_visibility.sql
+            - V5__add_invite_redemption_limits.sql
         - static
         - templates
       - test
+        - application-test.yaml
+    - test-results
+      - test
+        - binary
+          - output-events.bin
+          - results-generic.bin
+        - TEST-com.murisegames.api.ApiApplicationTests.xml
+        - TEST-com.murisegames.api.config.JwtValidationConfigTest.xml
+        - TEST-com.murisegames.api.modules.User.UserServiceTest.xml
     - tmp
       - compileJava
         - compileTransaction
           - backup-dir
           - stash-dir
-            - GlobalExceptionHandler.class.uniqueId0
+            - EventController.class.uniqueId6
+            - EventInviteController.class.uniqueId5
+            - EventInviteRepository.class.uniqueId0
+            - EventInviteService.class.uniqueId1
+            - EventMembershipRepository.class.uniqueId8
+            - EventMembershipService.class.uniqueId2
+            - EventService.class.uniqueId7
+            - TeamController.class.uniqueId3
+            - TeamService.class.uniqueId4
         - previous-compilation-data.bin
       - compileTestJava
         - previous-compilation-data.bin
+      - test
   - build.gradle
   - db_architecture.md
   - gradle
@@ -153,13 +233,54 @@
                 - RuntimeConfigurationValidator.java
                 - SecurityConfig.java
                 - SpringDataWebConfig.java
-              - identity
-                - MeController.java
               - modules
                 - Auth
                   - AuthController.java
                   - AuthResponse.java
                   - AuthService.java
+                - Event
+                  - dto
+                    - EventCreateRequest.java
+                  - Event.java
+                  - EventController.java
+                  - EventRepository.java
+                  - EventResponse.java
+                  - EventService.java
+                  - Invite
+                    - dto
+                      - InviteCreateRequest.java
+                      - InviteRedeemRequest.java
+                    - EventInvite.java
+                    - EventInviteController.java
+                    - EventInviteRepository.java
+                    - EventInviteResponse.java
+                    - EventInviteService.java
+                    - InviteCreatedResponse.java
+                    - InviteRedeemResponse.java
+                    - InviteRedemptionController.java
+                    - InviteRedemptionLimiter.java
+                    - InviteRedemptionService.java
+                  - JoinRequest
+                    - JoinRequest.java
+                    - JoinRequestRepository.java
+                  - Membership
+                    - EventMembership.java
+                    - EventMembershipRepository.java
+                    - EventMembershipService.java
+                    - EventRoleGrant.java
+                    - EventRoleGrantRepository.java
+                  - Participant
+                    - EventParticipant.java
+                    - EventParticipantRepository.java
+                  - Team
+                    - dto
+                      - TeamSaveRequest.java
+                    - Team.java
+                    - TeamController.java
+                    - TeamListResponse.java
+                    - TeamRepository.java
+                    - TeamResponse.java
+                    - TeamService.java
                 - User
                   - dto
                     - UserUpdateRequest.java
@@ -192,6 +313,9 @@
           - migration
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
+            - V3__add_murise_app_rls_policies.sql
+            - V4__add_event_visibility.sql
+            - V5__add_invite_redemption_limits.sql
         - static
         - templates
     - test
@@ -205,6 +329,8 @@
               - modules
                 - User
                   - UserServiceTest.java
+      - resources
+        - application-test.yaml
 - docs
 - project_structure.text
 - README.md
@@ -214,15 +340,39 @@
     - .gitignore
     - AGENTS.md
     - app
+      - auth
+        - callback
+          - page.tsx
+      - dashboard
+        - page.tsx
       - favicon.ico
       - globals.css
+      - join
+        - page.tsx
       - layout.tsx
+      - login
+        - page.tsx
       - page.tsx
+      - reset-password
+        - page.tsx
     - component
       - Auth
+        - AuthCallbackView.tsx
         - AuthForm.tsx
         - AuthProvider.tsx
+        - LoginView.tsx
         - ResetPasswordForm.tsx
+      - Dashboard
+        - DashboardView.tsx
+      - Event
+        - EventCreateForm.tsx
+        - EventPanel.tsx
+        - Invite
+          - InvitePanel.tsx
+          - JoinView.tsx
+        - Team
+          - TeamForm.tsx
+          - TeamPanel.tsx
       - User
         - ProfileCard.tsx
     - config
@@ -239,6 +389,22 @@
         - auth.service.ts
         - auth.type.ts
         - index.ts
+      - Event
+        - event.controller.ts
+        - event.service.ts
+        - event.type.ts
+        - index.ts
+        - Invite
+          - index.ts
+          - invite.controller.ts
+          - invite.service.ts
+          - invite.type.ts
+          - pending-invite.ts
+        - Team
+          - index.ts
+          - team.controller.ts
+          - team.service.ts
+          - team.type.ts
       - index.ts
       - User
         - index.ts
@@ -257,5 +423,3 @@
       - window.svg
     - README.md
     - tsconfig.json
-    - utils
-      - api-response.ts
