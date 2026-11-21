@@ -9,6 +9,7 @@ import { EventCreateForm } from "./EventCreateForm";
 import { TeamPanel } from "@/component/Event/Team/TeamPanel";
 import { EventGamePanel } from "@/component/Event/EventGame/EventGamePanel";
 import { ScoreboardPanel } from "@/component/Event/Scoring/ScoreboardPanel";
+import { EventService } from "@/modules";
 const buttonClass =
   "rounded-lg border border-zinc-700 px-3 py-1.5 text-sm " +
   "text-zinc-200 hover:bg-zinc-800 disabled:opacity-40";
@@ -132,7 +133,27 @@ export function EventPanel() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="font-semibold">{event.name}</h3>
                       <span className="text-xs text-zinc-400">
-                        {event.status} · {event.visibility}
+                        <div className="flex items-center gap-2 text-xs text-zinc-400">
+                          <select
+                            aria-label={`Status for ${event.name}`}
+                            value={event.status}
+                            onChange={async (e) => {
+                              await EventService.updateStatus(
+                                event.id,
+                                e.target.value,
+                              );
+                              reload();
+                            }}
+                            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-200"
+                          >
+                            <option value="draft">draft</option>
+                            <option value="published">published</option>
+                            <option value="live">live</option>
+                            <option value="completed">completed</option>
+                            <option value="archived">archived</option>
+                          </select>
+                          <span>· {event.visibility}</span>
+                        </div>
                       </span>
                     </div>
 

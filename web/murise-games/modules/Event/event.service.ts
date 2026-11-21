@@ -13,15 +13,19 @@ export const EventService = {
     return ApiService.post<EventResponse>("/api/events", payload);
   },
 
-  listMine(
-    page = 0,
-    size = 10,
-  ): Promise<CustomApiResponse<EventPage>> {
+  listMine(page = 0, size = 10): Promise<CustomApiResponse<EventPage>> {
     const query = new URLSearchParams({
       page: String(page),
       size: String(size),
     });
 
     return ApiService.get<EventPage>(`/api/events?${query}`);
+  },
+
+  updateStatus(eventId: string, status: string) {
+    return ApiService.patch<{ eventId: string; status: string }>(
+      `/api/events/${eventId}/status`,
+      { status },
+    );
   },
 };

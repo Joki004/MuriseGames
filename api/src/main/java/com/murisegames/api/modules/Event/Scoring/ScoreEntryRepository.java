@@ -15,6 +15,8 @@ public interface ScoreEntryRepository extends JpaRepository<ScoreEntry, UUID> {
 
     Optional<ScoreEntry> findByIdAndEventId(UUID id, UUID eventId);
 
+    Optional<ScoreEntry> findByEventIdAndSourceKey(UUID eventId, String sourceKey);
+
     boolean existsByReversesEntryId(UUID reversesEntryId);
 
     boolean existsByEventIdAndSourceKey(UUID eventId, String sourceKey);
