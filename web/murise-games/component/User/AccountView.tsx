@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/component/ui";
+import { PictureControl } from "@/component/Picture/PictureControl";
 
 export function AccountView() {
   return (
@@ -33,14 +34,6 @@ function AccountContent() {
   } | null>(null);
 
   if (!account) return null;
-
-  const initials = account.displayName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => Array.from(part)[0] ?? "")
-    .join("")
-    .toUpperCase();
 
   async function requestPasswordReset() {
     if (!account?.email || busy.current) return;
@@ -77,12 +70,12 @@ function AccountContent() {
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.5fr]">
         <Card>
           <div className="flex items-center gap-4">
-            <span
-              aria-hidden="true"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-white"
-            >
-              {initials || "?"}
-            </span>
+            <PictureControl
+              slot="AVATAR"
+              targetId={account.id}
+              label={account.displayName}
+              editable
+            />
 
             <div className="min-w-0">
               <h2 className="break-words text-lg font-semibold">

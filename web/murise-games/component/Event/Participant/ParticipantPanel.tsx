@@ -6,6 +6,7 @@ import {
   type EventParticipantResponse,
   type TeamOption,
 } from "@/modules/Event/Participant";
+import { PictureControl } from "@/component/Picture/PictureControl";
 
 interface ParticipantPanelProps {
   eventId: string;
@@ -121,6 +122,13 @@ export function ParticipantPanel({
               key={participant.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm"
             >
+              {participant.userId && (
+                <PictureControl
+                  slot="AVATAR"
+                  targetId={participant.userId}
+                  label={participant.displayName}
+                />
+              )}
               <div>
                 <p className="font-medium text-zinc-100">
                   {participant.displayName}
@@ -153,31 +161,7 @@ export function ParticipantPanel({
                     : "Unassigned"}
                 </span>
               )}
-              {canManage ? (
-                <select
-                  aria-label={`Team for ${participant.displayName}`}
-                  value={participant.teamId ?? ""}
-                  disabled={savingId === participant.id}
-                  onChange={(event) =>
-                    void handleTeamChange(participant.id, event.target.value)
-                  }
-                  className="ui-control max-w-full sm:w-auto"
-                >
-                  <option value="">Unassigned</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-sm text-muted">
-                  {participant.teamId
-                    ? (teams.find((team) => team.id === participant.teamId)
-                        ?.name ?? "Team unavailable")
-                    : "Unassigned"}
-                </span>
-              )}
+             
             </li>
           ))}
         </ul>

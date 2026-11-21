@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useCallback, useState } from "react";
+import { useAuth } from "@/component/Auth/AuthProvider";
 import { useEventDetail } from "./EventShell";
 import { TeamPanel } from "./Team/TeamPanel";
 import { ParticipantPanel } from "./Participant/ParticipantPanel";
@@ -8,8 +10,11 @@ import { JoinRequestPanel } from "./JoinRequest/JoinRequestPanel";
 import { InvitePanel } from "./Invite/InvitePanel";
 import { EventGamePanel } from "./EventGame/EventGamePanel";
 import { ScoreboardPanel } from "./Scoring/ScoreboardPanel";
+import { AsyncContent } from "@/component/ui/AsyncContent";
+import { ParticipantController } from "@/modules/Event/Participant";
 import {
   Alert,
+  Badge,
   Card,
   CardDescription,
   CardHeader,
@@ -18,9 +23,134 @@ import {
 
 export function EventOverview() {
   const { event, canManage } = useEventDetail();
+  const { account } = useAuth();
+
+  const loadRoster = useCallback(async () => {
+    const [participants, teams] = await Promise.all([
+      ParticipantController.list(event.id),
+      ParticipantController.listActiveTeamOptions(event.id),
+    ]);
+    return { participants, teams };
+  }, [event.id]);
 
   return (
     <div className="space-y-6">
+      {canManage ? (
+        <section
+          aria-label="Organizer actions"
+          className="grid gap-4 md:grid-cols-3"
+        >
+          <Card className="flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold">People &amp; teams</h3>
+              <p className="mt-1 text-sm text-muted">
+                Create teams, approve waiting room requests, and assign players.
+              </p>
+            </div>
+            <Link
+              href={`/events/${event.id}/people`}
+              className="ui-button ui-button--secondary"
+            >
+              Manage people
+            </Link>
+          </Card>
+
+          <Card className="flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold">Invitations</h3>
+              <p className="mt-1 text-sm text-muted">
+                Generate invite links, check usage, or revoke access.
+              </p>
+            </div>
+            <Link
+              href={`/events/${event.id}/invitations`}
+              className="ui-button ui-button--secondary"
+            >
+              Manage invitations
+            </Link>
+          </Card>
+
+          <Card className="flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold">Selected games</h3>
+              <p className="mt-1 text-sm text-muted">
+                Build the lineup, update game status, and add house rules.
+              </p>
+            </div>
+            <Link
+              href={`/events/${event.id}/games`}
+              className="ui-button ui-button--secondary"
+            >
+              Manage games
+            </Link>
+          </Card>
+        </section>
+      ) : (
+        <section
+          aria-label="Player overview"
+          className="grid gap-4 md:grid-cols-2"
+        >
+          <Card className="flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold">Your team</h3>
+              <div className="mt-2">
+                <AsyncContent load={loadRoster} label="Checking your team…">
+                  {({ participants, teams }) => {
+                    const me = participants.find(
+                      (p) => account?.id && p.userId === account.id,
+                    );
+                    if (!me) {
+                      return (
+                        <p className="text-sm text-muted">
+                          You are not on the active roster yet.
+                        </p>
+                      );
+                    }
+
+                    const team = me.teamId
+                      ? teams.find((t) => t.id === me.teamId)
+                      : undefined;
+
+                    return team ? (
+                      <div className="flex items-center gap-2">
+                        <Badge tone="accent">{team.name}</Badge>
+                        {me.captain && <Badge tone="success">Captain</Badge>}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted">
+                        Waiting for the organizer to assign your team.
+                      </p>
+                    );
+                  }}
+                </AsyncContent>
+              </div>
+            </div>
+            <Link
+              href={`/events/${event.id}/people`}
+              className="ui-button ui-button--secondary"
+            >
+              View teams &amp; roster
+            </Link>
+          </Card>
+
+          <Card className="flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold">Games &amp; rules</h3>
+              <p className="mt-1 text-sm text-muted">
+                Review the selected lineup, scoring, and house rules for this
+                event.
+              </p>
+            </div>
+            <Link
+              href={`/events/${event.id}/games`}
+              className="ui-button ui-button--secondary"
+            >
+              View games &amp; rules
+            </Link>
+          </Card>
+        </section>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>About this event</CardTitle>
@@ -48,8 +178,8 @@ export function EventOverview() {
 
         {canManage && (
           <p className="mt-6 text-sm text-muted">
-            You organize this event. Joining a team as a player is a
-            separate action.
+            You organize this event. Joining a team as a player is a separate
+            action.
           </p>
         )}
       </Card>
@@ -104,9 +234,7 @@ export function EventInvitations() {
 
   if (!canManage) {
     return (
-      <Alert tone="info">
-        Only event organizers can manage invitations.
-      </Alert>
+      <Alert tone="info">Only event organizers can manage invitations.</Alert>
     );
   }
 

@@ -33,6 +33,10 @@
     - compiler.xml
     - gradle.xml
     - misc.xml
+    - modules
+      - api.main.iml
+      - api.test.iml
+    - modules.xml
     - vcs.xml
     - workspace.xml
   - build
@@ -57,14 +61,36 @@
                     - AuthController.class
                     - AuthResponse.class
                     - AuthService.class
+                  - Catalog
+                    - CatalogController.class
+                    - CatalogGameResponse.class
+                    - CatalogService.class
+                    - dto
+                      - CatalogGameCreateRequest.class
+                    - GameDefinition.class
+                    - GameDefinitionRepository.class
+                    - GameVersion.class
+                    - GameVersionRepository.class
                   - Event
                     - dto
                       - EventCreateRequest.class
                     - Event.class
                     - EventController.class
+                    - EventDetailResponse.class
+                    - EventGame
+                      - dto
+                        - EventGameAddRequest.class
+                        - EventGameUpdateRequest.class
+                      - EventGame.class
+                      - EventGameController.class
+                      - EventGameRepository.class
+                      - EventGameResponse.class
+                      - EventGameService.class
                     - EventRepository.class
                     - EventResponse.class
                     - EventService.class
+                    - EventStatusController$EventStatusUpdateRequest.class
+                    - EventStatusController.class
                     - Invite
                       - dto
                         - InviteCreateRequest.class
@@ -80,8 +106,13 @@
                       - InviteRedemptionLimiter.class
                       - InviteRedemptionService.class
                     - JoinRequest
+                      - dto
+                        - JoinRequestApproveRequest.class
                       - JoinRequest.class
+                      - JoinRequestController.class
                       - JoinRequestRepository.class
+                      - JoinRequestResponse.class
+                      - JoinRequestService.class
                     - Membership
                       - EventMembership.class
                       - EventMembershipRepository.class
@@ -89,8 +120,32 @@
                       - EventRoleGrant.class
                       - EventRoleGrantRepository.class
                     - Participant
+                      - dto
+                        - ParticipantTeamAssignRequest.class
                       - EventParticipant.class
+                      - EventParticipantController.class
                       - EventParticipantRepository.class
+                      - EventParticipantResponse.class
+                      - EventParticipantService.class
+                    - Scoring
+                      - dto
+                        - ScoreboardVisibilityRequest.class
+                        - ScoreEntryCreateRequest.class
+                        - ScoreEntryReverseRequest.class
+                      - ScoreboardResponse.class
+                      - ScoreboardRowResponse.class
+                      - ScoreboardSnapshot.class
+                      - ScoreboardSnapshotRepository.class
+                      - ScoreboardSnapshotRow.class
+                      - ScoreboardSnapshotRowId.class
+                      - ScoreboardSnapshotRowRepository.class
+                      - ScoreEntry.class
+                      - ScoreEntryRepository$TeamPointTotal.class
+                      - ScoreEntryRepository.class
+                      - ScoreEntryResponse.class
+                      - ScoringController.class
+                      - ScoringService$EventScoreboardState.class
+                      - ScoringService.class
                     - Team
                       - dto
                         - TeamSaveRequest.class
@@ -100,6 +155,24 @@
                       - TeamRepository.class
                       - TeamResponse.class
                       - TeamService.class
+                  - Picture
+                    - MediaAsset.class
+                    - MediaAssetRepository.class
+                    - Picture.class
+                    - PictureCleanup.class
+                    - PictureController$EmojiRequest.class
+                    - PictureController.class
+                    - PictureImageProcessor.class
+                    - PictureRepository.class
+                    - PictureResponse.class
+                    - PictureService.class
+                    - PictureSlot.class
+                    - PictureTransactions$1.class
+                    - PictureTransactions$Selection.class
+                    - PictureTransactions$Target.class
+                    - PictureTransactions.class
+                    - SupabasePictureStorage$SignedResponse.class
+                    - SupabasePictureStorage.class
                   - User
                     - dto
                       - UserUpdateRequest.class
@@ -155,9 +228,7 @@
           - com.murisegames.api.ApiApplicationTests
             - index.html
           - com.murisegames.api.config.JwtValidationConfigTest
-            - index.html
           - com.murisegames.api.modules.User.UserServiceTest
-            - index.html
           - css
             - base-style.css
             - style.css
@@ -176,6 +247,8 @@
             - V3__add_murise_app_rls_policies.sql
             - V4__add_event_visibility.sql
             - V5__add_invite_redemption_limits.sql
+            - V6__seed_nine_games.sql
+            - V7__add_picture_personalization.sql
         - static
         - templates
       - test
@@ -186,24 +259,17 @@
           - output-events.bin
           - results-generic.bin
         - TEST-com.murisegames.api.ApiApplicationTests.xml
-        - TEST-com.murisegames.api.config.JwtValidationConfigTest.xml
-        - TEST-com.murisegames.api.modules.User.UserServiceTest.xml
     - tmp
       - compileJava
         - compileTransaction
           - backup-dir
           - stash-dir
-            - EventController.class.uniqueId6
-            - EventInviteController.class.uniqueId5
-            - EventInviteRepository.class.uniqueId0
-            - EventInviteService.class.uniqueId1
-            - EventMembershipRepository.class.uniqueId8
-            - EventMembershipService.class.uniqueId2
-            - EventService.class.uniqueId7
-            - TeamController.class.uniqueId3
-            - TeamService.class.uniqueId4
         - previous-compilation-data.bin
       - compileTestJava
+        - compileTransaction
+          - backup-dir
+          - stash-dir
+            - ApiApplicationTests.class.uniqueId0
         - previous-compilation-data.bin
       - test
   - build.gradle
@@ -238,14 +304,35 @@
                   - AuthController.java
                   - AuthResponse.java
                   - AuthService.java
+                - Catalog
+                  - CatalogController.java
+                  - CatalogGameResponse.java
+                  - CatalogService.java
+                  - dto
+                    - CatalogGameCreateRequest.java
+                  - GameDefinition.java
+                  - GameDefinitionRepository.java
+                  - GameVersion.java
+                  - GameVersionRepository.java
                 - Event
                   - dto
                     - EventCreateRequest.java
                   - Event.java
                   - EventController.java
+                  - EventDetailResponse.java
+                  - EventGame
+                    - dto
+                      - EventGameUpdateRequest.java
+                    - EventGame.java
+                    - EventGameAddRequest.java
+                    - EventGameController.java
+                    - EventGameRepository.java
+                    - EventGameResponse.java
+                    - EventGameService.java
                   - EventRepository.java
                   - EventResponse.java
                   - EventService.java
+                  - EventStatusController.java
                   - Invite
                     - dto
                       - InviteCreateRequest.java
@@ -261,8 +348,13 @@
                     - InviteRedemptionLimiter.java
                     - InviteRedemptionService.java
                   - JoinRequest
+                    - dto
+                      - JoinRequestApproveRequest.java
                     - JoinRequest.java
+                    - JoinRequestController.java
                     - JoinRequestRepository.java
+                    - JoinRequestResponse.java
+                    - JoinRequestService.java
                   - Membership
                     - EventMembership.java
                     - EventMembershipRepository.java
@@ -270,8 +362,30 @@
                     - EventRoleGrant.java
                     - EventRoleGrantRepository.java
                   - Participant
+                    - dto
+                      - ParticipantTeamAssignRequest.java
                     - EventParticipant.java
+                    - EventParticipantController.java
                     - EventParticipantRepository.java
+                    - EventParticipantResponse.java
+                    - EventParticipantService.java
+                  - Scoring
+                    - dto
+                      - ScoreboardVisibilityRequest.java
+                      - ScoreEntryCreateRequest.java
+                      - ScoreEntryReverseRequest.java
+                    - ScoreboardResponse.java
+                    - ScoreboardRowResponse.java
+                    - ScoreboardSnapshot.java
+                    - ScoreboardSnapshotRepository.java
+                    - ScoreboardSnapshotRow.java
+                    - ScoreboardSnapshotRowId.java
+                    - ScoreboardSnapshotRowRepository.java
+                    - ScoreEntry.java
+                    - ScoreEntryRepository.java
+                    - ScoreEntryResponse.java
+                    - ScoringController.java
+                    - ScoringService.java
                   - Team
                     - dto
                       - TeamSaveRequest.java
@@ -281,6 +395,19 @@
                     - TeamRepository.java
                     - TeamResponse.java
                     - TeamService.java
+                - Picture
+                  - MediaAsset.java
+                  - MediaAssetRepository.java
+                  - Picture.java
+                  - PictureCleanup.java
+                  - PictureController.java
+                  - PictureImageProcessor.java
+                  - PictureRepository.java
+                  - PictureResponse.java
+                  - PictureService.java
+                  - PictureSlot.java
+                  - PictureTransactions.java
+                  - SupabasePictureStorage.java
                 - User
                   - dto
                     - UserUpdateRequest.java
@@ -316,6 +443,8 @@
             - V3__add_murise_app_rls_policies.sql
             - V4__add_event_visibility.sql
             - V5__add_invite_redemption_limits.sql
+            - V6__seed_nine_games.sql
+            - V7__add_picture_personalization.sql
         - static
         - templates
     - test
@@ -332,6 +461,7 @@
       - resources
         - application-test.yaml
 - docs
+- local_setup_guide.md
 - project_structure.text
 - README.md
 - web
@@ -340,12 +470,28 @@
     - .gitignore
     - AGENTS.md
     - app
+      - account
+        - page.tsx
       - auth
         - callback
           - page.tsx
       - dashboard
         - page.tsx
+      - events
+        - [eventId]
+          - games
+            - page.tsx
+          - invitations
+            - page.tsx
+          - layout.tsx
+          - page.tsx
+          - people
+            - page.tsx
       - favicon.ico
+      - games
+        - page.tsx
+        - [code]
+          - page.tsx
       - globals.css
       - join
         - page.tsx
@@ -361,19 +507,50 @@
         - AuthForm.tsx
         - AuthProvider.tsx
         - LoginView.tsx
+        - RequireAccount.tsx
         - ResetPasswordForm.tsx
       - Dashboard
         - DashboardView.tsx
       - Event
         - EventCreateForm.tsx
+        - EventGame
+          - EventGamePanel.tsx
+        - EventPages.tsx
         - EventPanel.tsx
+        - EventShell.tsx
         - Invite
           - InvitePanel.tsx
           - JoinView.tsx
+        - JoinRequest
+          - JoinRequestPanel.tsx
+        - Participant
+          - ParticipantPanel.tsx
+        - Scoring
+          - ScoreboardPanel.tsx
         - Team
           - TeamForm.tsx
           - TeamPanel.tsx
+      - Games
+        - CatalogView.tsx
+        - Rules.tsx
+      - Layout
+        - Navbar.tsx
+        - PageShell.tsx
+      - Picture
+        - crop-image.ts
+        - PictureControl.tsx
+      - ui
+        - AsyncContent.tsx
+        - Badge.tsx
+        - Button.tsx
+        - Card.tsx
+        - cx.ts
+        - Dialog.tsx
+        - Feedback.tsx
+        - Fields.tsx
+        - index.ts
       - User
+        - AccountView.tsx
         - ProfileCard.tsx
     - config
       - env.ts
@@ -389,10 +566,20 @@
         - auth.service.ts
         - auth.type.ts
         - index.ts
+      - Catalog
+        - catalog.controller.ts
+        - catalog.service.ts
+        - catalog.type.ts
+        - index.ts
       - Event
         - event.controller.ts
         - event.service.ts
         - event.type.ts
+        - EventGame
+          - event-game.controller.ts
+          - event-game.service.ts
+          - event-game.type.ts
+          - index.ts
         - index.ts
         - Invite
           - index.ts
@@ -400,12 +587,31 @@
           - invite.service.ts
           - invite.type.ts
           - pending-invite.ts
+        - JoinRequest
+          - index.ts
+          - join-request.controller.ts
+          - join-request.service.ts
+          - join-request.type.ts
+        - Participant
+          - index.ts
+          - participant.controller.ts
+          - participant.service.ts
+          - participant.type.ts
+        - Scoring
+          - index.ts
+          - scoring.controller.ts
+          - scoring.service.ts
+          - scoring.type.ts
         - Team
           - index.ts
           - team.controller.ts
           - team.service.ts
           - team.type.ts
       - index.ts
+      - Picture
+        - picture.controller.ts
+        - picture.service.ts
+        - picture.type.ts
       - User
         - index.ts
         - user.controller.ts

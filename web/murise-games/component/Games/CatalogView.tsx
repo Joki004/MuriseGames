@@ -23,8 +23,25 @@ import { Rules } from "./Rules";
 
 const loadCatalog = () => CatalogController.list();
 
+const GAME_ICONS: Record<string, string> = {
+  "grab-the-cup": "🥤",
+  "sensory-chain": "🎭",
+  "unified-alibi": "🕵️",
+  "social-scenario": "🚩",
+  "poison-game": "☠️",
+  "rhythm-grid-hunt": "🎯",
+  "group-chat-meltdown": "💬",
+  "final-rehearsal": "🎬",
+  "secret-scene-premiere": "🏆",
+};
+
 function readable(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function getConfirmedDuration(config: Record<string, unknown>): string | null {
+  const mins = config?.duration_minutes;
+  return typeof mins === "number" && mins > 0 ? `${mins} min` : null;
 }
 
 export function CatalogView() {
@@ -45,17 +62,19 @@ export function CatalogView() {
 function CatalogList({ games }: { games: CatalogGameResponse[] }) {
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState("");
+  const [mode, setMode] = useState("");
 
   const query = search.trim().toLowerCase();
   const filtered = games.filter(
     (game) =>
       (!kind || game.kind === kind) &&
-      `${game.name} ${game.summary}`.toLowerCase().includes(query),
+      (!mode || game.participationMode === mode) &&
+      `${game.name} ${game.summary}`.toLowerCase().includes(query)
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-[1fr_14rem]">
+      <div className="grid gap-4 sm:grid-cols-[1fr_13rem_13rem]">
         <Input
           label="Search games"
           type="search"
@@ -65,15 +84,28 @@ function CatalogList({ games }: { games: CatalogGameResponse[] }) {
         />
 
         <Select
-          label="Game type"
+          label="Game category"
           value={kind}
           onChange={(event) => setKind(event.target.value)}
         >
-          <option value="">All types</option>
+          <option value="">All categories</option>
           <option value="party">Party</option>
           <option value="competitive">Competitive</option>
           <option value="social_deduction">Social deduction</option>
           <option value="rehearsal">Rehearsal</option>
+        </Select>
+
+        <Select
+          label="Participation format"
+          value={mode}
+          onChange={(event) => setMode(event.target.value)}
+        >
+          <option value="">All formats</option>
+          <option value="head_to_head">Head to head</option>
+          <option value="team_solo">Team solo</option>
+          <option value="all_teams">All teams</option>
+          <option value="multi_team_pod">Multi-team pod</option>
+          <option value="individual">Individual</option>
         </Select>
       </div>
 
@@ -83,45 +115,62 @@ function CatalogList({ games }: { games: CatalogGameResponse[] }) {
 
       {filtered.length === 0 ? (
         <EmptyState
-          title={games.length === 0 ? "No published games yet" : "No matching games"}
+          title={
+            games.length === 0 ? "No published games yet" : "No matching games"
+          }
           description={
             games.length === 0
               ? "Published games will appear here."
-              : "Try another search or game type."
+              : "Try another search, category, or participation format."
           }
         />
       ) : (
         <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((game) => (
-            <li key={game.definitionId} className="min-w-0">
-              <Card className="flex h-full flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
-                  <Badge tone="accent">{readable(game.kind)}</Badge>
-                  <Badge>{readable(game.participationMode)}</Badge>
-                </div>
+          {filtered.map((game) => {
+            const icon = GAME_ICONS[game.code] ?? "🎲";
+            const duration = getConfirmedDuration(game.scoringConfig);
 
-                <h2 className="break-words text-xl font-semibold">
+            return (
+              <li key={game.definitionId} className="min-w-0">
+                <Card className="flex h-full flex-col gap-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ui-radius-control)] bg-surface-raised text-xl"
+                    >
+                      {icon}
+                    </span>
+
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      <Badge tone="accent">{readable(game.kind)}</Badge>
+                      <Badge>{readable(game.participationMode)}</Badge>
+                      {duration && <Badge>{duration}</Badge>}
+                    </div>
+                  </div>
+
+                  <h2 className="break-words text-xl font-semibold">
+                    <Link
+                      href={`/games/${encodeURIComponent(game.code)}`}
+                      className="hover:text-highlight"
+                    >
+                      {game.name}
+                    </Link>
+                  </h2>
+
+                  <p className="break-words text-sm text-muted">
+                    {game.summary}
+                  </p>
+
                   <Link
                     href={`/games/${encodeURIComponent(game.code)}`}
-                    className="hover:text-highlight"
+                    className="ui-button ui-button--secondary mt-auto"
                   >
-                    {game.name}
+                    View game and rules
                   </Link>
-                </h2>
-
-                <p className="break-words text-sm text-muted">
-                  {game.summary}
-                </p>
-
-                <Link
-                  href={`/games/${encodeURIComponent(game.code)}`}
-                  className="ui-button ui-button--secondary mt-auto"
-                >
-                  View game and rules
-                </Link>
-              </Card>
-            </li>
-          ))}
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -133,11 +182,7 @@ export function CatalogGameView() {
 
   return (
     <RequireAccount>
-      <AsyncContent
-        key={code}
-        load={loadCatalog}
-        label="Loading game rules…"
-      >
+      <AsyncContent key={code} load={loadCatalog} label="Loading game rules…">
         {(games) => {
           const game = games.find((item) => item.code === code);
 
@@ -148,7 +193,10 @@ export function CatalogGameView() {
                   title="This game is not in the published catalog"
                   description="It may have been removed or is not published yet."
                   action={
-                    <Link href="/games" className="ui-button ui-button--secondary">
+                    <Link
+                      href="/games"
+                      className="ui-button ui-button--secondary"
+                    >
                       Back to games
                     </Link>
                   }
@@ -157,9 +205,12 @@ export function CatalogGameView() {
             );
           }
 
+          const icon = GAME_ICONS[game.code] ?? "🎲";
+          const duration = getConfirmedDuration(game.scoringConfig);
+
           return (
             <PageShell
-              title={game.name}
+              title={`${icon} ${game.name}`}
               description={game.summary}
               action={
                 <Link href="/games" className="ui-button ui-button--secondary">
@@ -170,19 +221,20 @@ export function CatalogGameView() {
               <div className="flex flex-wrap gap-2">
                 <Badge tone="accent">{readable(game.kind)}</Badge>
                 <Badge>{readable(game.participationMode)}</Badge>
-                <Badge>Published version {game.version}</Badge>
+                <Badge>Published v{game.version}</Badge>
+                {duration && <Badge>{duration}</Badge>}
               </div>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>How to play</CardTitle>
+                  <CardTitle>Rules</CardTitle>
                 </CardHeader>
                 <Rules text={game.rulesMarkdown} />
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Scoring</CardTitle>
+                  <CardTitle>Scoring &amp; victory</CardTitle>
                 </CardHeader>
                 <Rules text={game.endGameScoringSummary} />
               </Card>

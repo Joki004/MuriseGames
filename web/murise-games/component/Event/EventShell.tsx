@@ -2,19 +2,14 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { AsyncContent } from "@/component/ui/AsyncContent";
 import { Badge } from "@/component/ui";
 import { EventController } from "@/modules/Event/event.controller";
 import type { EventDetailResponse } from "@/modules/Event/event.type";
 import { formatEventTime } from "@/component/Dashboard/DashboardView";
-
+import { PictureControl } from "@/component/Picture/PictureControl";
 const EventContext = createContext<EventDetailResponse | null>(null);
 
 export function useEventDetail() {
@@ -49,17 +44,17 @@ function EventLoader({
   eventId: string;
   children: ReactNode;
 }) {
-  const load = useCallback(
-    () => EventController.getDetail(eventId),
-    [eventId],
-  );
+  const load = useCallback(() => EventController.getDetail(eventId), [eventId]);
 
   return (
     <main
       id="main-content"
       className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6"
     >
-      <Link href="/dashboard" className="text-sm text-highlight hover:underline">
+      <Link
+        href="/dashboard"
+        className="text-sm text-highlight hover:underline"
+      >
         ← All events
       </Link>
 
@@ -91,6 +86,12 @@ function EventHeader() {
 
   return (
     <header className="space-y-6">
+      <PictureControl
+        slot="EVENT_COVER"
+        targetId={event.id}
+        label={event.theme || event.name}
+        editable={canManage}
+      />
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Badge tone={event.status === "live" ? "success" : "accent"}>
@@ -100,6 +101,12 @@ function EventHeader() {
           {canManage && <Badge tone="warning">Organizer</Badge>}
         </div>
 
+        <PictureControl
+          slot="EVENT_ICON"
+          targetId={event.id}
+          label={event.name}
+          editable={canManage}
+        />
         <h1 className="break-words text-3xl font-semibold tracking-tight sm:text-4xl">
           {event.name}
         </h1>

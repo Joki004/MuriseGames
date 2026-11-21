@@ -49,6 +49,10 @@ spring:
           jws-algorithms:
             - ES256
             - RS256
+    servlet:
+      multipart:
+        max-file-size: 5MB
+        max-request-size: 6MB
 
 server:
   port: ${PORT:8080}
@@ -67,6 +71,9 @@ app:
     allowed-origins: ${CORS_ORIGINS}
   swagger:
     enabled: ${SWAGGER_ENABLED:false}
+  pictures:
+    supabase-url: ${SUPABASE_URL}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
 
 springdoc:
   packages-to-scan:

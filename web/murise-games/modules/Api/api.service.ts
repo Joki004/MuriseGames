@@ -11,7 +11,10 @@ function resolveUrl(url: string): string {
 }
 
 function generateRequestId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `req-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
@@ -19,14 +22,14 @@ function generateRequestId(): string {
 
 async function resolveAuthHeader(
   existingHeaders: Record<string, string>,
-  skipAuth?: boolean
+  skipAuth?: boolean,
 ): Promise<Record<string, string>> {
   if (skipAuth) {
     return {};
   }
 
   const hasAuthHeader = Object.keys(existingHeaders).some(
-    (key) => key.toLowerCase() === "authorization"
+    (key) => key.toLowerCase() === "authorization",
   );
   if (hasAuthHeader) {
     return {};
@@ -69,7 +72,17 @@ async function apiRequest<T>({
   };
 
   const hasBody = method !== "GET" && data !== undefined;
-  if (hasBody) {
+  const isFormData =
+    typeof FormData !== "undefined" && data instanceof FormData;
+
+  if (hasBody && isFormData) {
+    // The browser supplies the multipart boundary.
+    for (const key of Object.keys(requestHeaders)) {
+      if (key.toLowerCase() === "content-type") {
+        delete requestHeaders[key];
+      }
+    }
+  } else if (hasBody) {
     requestHeaders["Content-Type"] = "application/json";
   }
 
@@ -77,7 +90,11 @@ async function apiRequest<T>({
     method,
     headers: requestHeaders,
     credentials: "omit",
-    body: hasBody ? JSON.stringify(data) : undefined,
+    body: hasBody
+      ? isFormData
+        ? (data as FormData)
+        : JSON.stringify(data)
+      : undefined,
   };
 
   try {
@@ -130,7 +147,7 @@ async function apiRequest<T>({
 }
 
 export function isApiResponseError(
-  error: unknown
+  error: unknown,
 ): error is CustomApiResponse<null> {
   return (
     typeof error === "object" &&
@@ -143,7 +160,7 @@ export function isApiResponseError(
 
 export function extractApiErrorMessage(
   error: unknown,
-  fallback = "An unexpected error occurred."
+  fallback = "An unexpected error occurred.",
 ): string {
   if (isApiResponseError(error)) {
     const firstFieldError = error.errors?.[0];

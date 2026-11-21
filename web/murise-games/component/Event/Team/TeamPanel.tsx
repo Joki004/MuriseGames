@@ -7,6 +7,7 @@ import type {
   TeamResponse,
 } from "@/modules/Event/Team/team.type";
 import { TeamForm } from "./TeamForm";
+import { PictureControl } from "@/component/Picture/PictureControl";
 
 const buttonClass =
   "rounded-lg border border-zinc-700 px-3 py-1.5 text-sm " +
@@ -136,11 +137,12 @@ function TeamContent({ eventId, onChanged }: TeamPanelProps) {
                     rounded-lg border border-zinc-800 p-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0 rounded-full
-                        border border-white/20"
-                      style={{ backgroundColor: team.color }}
+                    <PictureControl
+                      slot="TEAM_ICON"
+                      targetId={team.id}
+                      label={team.name}
+                      color={team.color}
+                      editable={result.canManage}
                     />
                     <div>
                       <p className="text-sm font-medium">{team.name}</p>

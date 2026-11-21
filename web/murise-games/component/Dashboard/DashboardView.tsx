@@ -4,18 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { useAuth } from "@/component/Auth/AuthProvider";
 import { PageShell } from "@/component/Layout/PageShell";
 import { EventCreateForm } from "@/component/Event/EventCreateForm";
 import { AsyncContent } from "@/component/ui/AsyncContent";
-import {
-  Badge,
-  Button,
-  Card,
-  Dialog,
-  EmptyState,
-} from "@/component/ui";
+import { Badge, Button, Card, Dialog, EmptyState } from "@/component/ui";
 import { EventController } from "@/modules/Event/event.controller";
 import type { EventResponse } from "@/modules/Event/event.type";
+import { PictureControl } from "../Picture/PictureControl";
 
 export function formatEventTime(event: EventResponse) {
   return new Intl.DateTimeFormat(undefined, {
@@ -35,25 +31,19 @@ export function DashboardView() {
 
 function DashboardContent() {
   const router = useRouter();
+  const { account } = useAuth();
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(
-    () => EventController.listMine(page, 12),
-    [page],
-  );
+  const load = useCallback(() => EventController.listMine(page, 12), [page]);
 
   return (
     <PageShell
       title="Your game nights"
       description="Plan the next one, revisit an event, or join your friends."
-      action={
-        <Button onClick={() => setCreating(true)}>
-          + Create event
-        </Button>
-      }
+      action={<Button onClick={() => setCreating(true)}>+ Create event</Button>}
     >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">My events</h2>
@@ -89,56 +79,84 @@ function DashboardContent() {
               />
             ) : (
               <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {result.content.map((event) => (
-                  <li key={event.id} className="min-w-0">
-                    <Card className="flex h-full flex-col gap-5">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge
-                          tone={event.status === "live" ? "success" : "accent"}
-                        >
-                          {event.status}
-                        </Badge>
-                        <Badge>{event.visibility}</Badge>
-                      </div>
+                {result.content.map((event) => {
+                  const isOrganizer =
+                    account?.id != null && event.createdBy === account.id;
 
-                      <div className="min-w-0">
-                        <h3 className="break-words text-xl font-semibold">
-                          <Link
-                            href={`/events/${event.id}`}
-                            className="hover:text-highlight"
-                          >
-                            {event.name}
-                          </Link>
-                        </h3>
+                  return (
+                    <li key={event.id} className="min-w-0">
+                      <Card className="flex h-full flex-col gap-4 overflow-hidden">
+                        <div className="-mx-6 -mt-6">
+                          <PictureControl
+                            slot="EVENT_COVER"
+                            targetId={event.id}
+                            label={`${event.name} cover`}
+                          />
+                        </div>
 
-                        {event.theme && (
-                          <p className="mt-2 break-words text-muted">
-                            {event.theme}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <PictureControl
+                              slot="EVENT_ICON"
+                              targetId={event.id}
+                              label={event.name}
+                            />
+                            <Badge tone={isOrganizer ? "accent" : "neutral"}>
+                              {isOrganizer ? "Organizer" : "Player"}
+                            </Badge>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge
+                              tone={
+                                event.status === "live" ? "success" : "accent"
+                              }
+                            >
+                              {event.status}
+                            </Badge>
+                            <Badge>{event.visibility}</Badge>
+                          </div>
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="break-words text-xl font-semibold">
+                            <Link
+                              href={`/events/${event.id}`}
+                              className="hover:text-highlight"
+                            >
+                              {event.name}
+                            </Link>
+                          </h3>
+
+                          {event.theme && (
+                            <p className="mt-1 break-words text-sm text-muted">
+                              {event.theme}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 text-sm text-muted">
+                          <p>
+                            <time dateTime={event.startsAt}>
+                              {formatEventTime(event)}
+                            </time>
                           </p>
-                        )}
-                      </div>
+                          <p>{event.timezone}</p>
+                          <p className="break-words">
+                            {event.venue || "Venue to be announced"}
+                          </p>
+                        </div>
 
-                      <div className="space-y-1 text-sm text-muted">
-                        <p>
-                          <time dateTime={event.startsAt}>
-                            {formatEventTime(event)}
-                          </time>
-                        </p>
-                        <p>{event.timezone}</p>
-                        {event.venue && (
-                          <p className="break-words">{event.venue}</p>
-                        )}
-                      </div>
-
-                      <Link
-                        href={`/events/${event.id}`}
-                        className="ui-button ui-button--secondary mt-auto"
-                      >
-                        Open event
-                      </Link>
-                    </Card>
-                  </li>
-                ))}
+                        <Link
+                          href={`/events/${event.id}`}
+                          className="ui-button ui-button--secondary mt-auto"
+                        >
+                          Open event
+                        </Link>
+                      </Card>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
