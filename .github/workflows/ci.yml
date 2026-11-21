@@ -102,3 +102,10 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+      - name: Build frontend
+        working-directory: web/murise-games
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+        run: npm run build
