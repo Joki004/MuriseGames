@@ -25,18 +25,21 @@ export function RankingStatusPanel() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
 
     void ScoringController.getRankingStatus(event.id)
       .then((data) => {
-        if (active) setStatus(data);
+        if (active) {
+          setStatus(data);
+          setError(null);
+        }
       })
       .catch((err: unknown) => {
         if (active) {
           setStatus(null);
           setError(
-            err instanceof Error ? err.message : "Could not load ranking status.",
+            err instanceof Error
+              ? err.message
+              : "Could not load ranking status.",
           );
         }
       })
@@ -50,7 +53,9 @@ export function RankingStatusPanel() {
   }, [event.id, tick]);
 
   if (loading) {
-    return <p className="text-sm text-muted">Checking official ranking status…</p>;
+    return (
+      <p className="text-sm text-muted">Checking official ranking status…</p>
+    );
   }
 
   if (!status) {
@@ -79,11 +84,17 @@ export function RankingStatusPanel() {
           </div>
           <div className="flex items-center gap-2">
             <Badge tone={status.finalRankingAllowed ? "success" : "warning"}>
-              {status.finalRankingAllowed ? "Final ranking ready" : "Provisional"}
+              {status.finalRankingAllowed
+                ? "Final ranking ready"
+                : "Provisional"}
             </Badge>
             <Button
               variant="secondary"
-              onClick={() => setTick((n) => n + 1)}
+              onClick={() => {
+                setLoading(true);
+                setError(null);
+                setTick((n) => n + 1);
+              }}
             >
               Refresh
             </Button>
