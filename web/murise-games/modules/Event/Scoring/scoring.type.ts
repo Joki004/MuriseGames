@@ -46,3 +46,32 @@ export interface ScoreEntryCreateRequest {
   reason: string;
   sourceKey?: string;
 }
+
+export interface RankedTeam {
+  rank: number;
+  teamId: string;
+  teamName: string;
+  exactNumerator: string;
+  exactDenominator: string;
+  displayPoints: string;
+  settledPoints: number;
+}
+
+export interface RankingStatusResponse {
+  eventId: string;
+  policy: string;
+  maximumGamePoints: number;
+  finalRankingAllowed: boolean;
+  blockers: string[];
+  includedGames: string[];
+  standings: RankedTeam[];
+}
+
+export interface RecordFixtureResultRequest {
+  teamValues: Record<string, number[]>;
+  reason: string;
+}
+
+export interface CancelFixtureRequest {
+  reason: string;
+}
