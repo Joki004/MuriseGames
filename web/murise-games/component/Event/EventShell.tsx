@@ -83,6 +83,7 @@ function EventHeader() {
       ? [
           { href: `${base}/invitations`, label: "Invitations" },
           { href: `${base}/clues`, label: "Clues" },
+          { href: `${base}/scoring`, label: "Scoring" },
         ]
       : []),
   ];
