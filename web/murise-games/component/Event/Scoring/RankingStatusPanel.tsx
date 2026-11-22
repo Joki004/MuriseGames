@@ -103,7 +103,7 @@ export function RankingStatusPanel() {
       </CardHeader>
 
       {!status.finalRankingAllowed && status.blockers.length > 0 && (
-        <Alert tone="warning">
+        <Alert tone="info">
           <p className="font-medium">Final ranking is blocked:</p>
           <ul className="mt-1 list-disc pl-5 text-sm">
             {status.blockers.map((b) => (
