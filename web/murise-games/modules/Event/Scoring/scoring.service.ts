@@ -1,6 +1,9 @@
 import { ApiService } from "@/modules/Api/api.service";
 import type { CustomApiResponse } from "@/modules/Api/api.type";
 import type {
+  CancelFixtureRequest,
+  RankingStatusResponse,
+  RecordFixtureResultRequest,
   ScoreEntryCreateRequest,
   ScoreEntryResponse,
   ScoreboardResponse,
@@ -46,6 +49,34 @@ export const ScoringService = {
     return ApiService.post<ScoreEntryResponse>(
       `/api/events/${eventId}/scores/${entryId}/reverse`,
       { reason }
+    );
+  },
+
+  getRankingStatus(eventId: string) {
+    return ApiService.get<RankingStatusResponse>(
+      `/api/v1/events/${encodeURIComponent(eventId)}/scoring/ranking-status`,
+    );
+  },
+
+  recordFixtureResult(
+    eventId: string,
+    fixtureId: string,
+    payload: RecordFixtureResultRequest,
+  ) {
+    return ApiService.put(
+      `/api/v1/events/${encodeURIComponent(eventId)}/fixtures/${encodeURIComponent(fixtureId)}/result`,
+      payload,
+    );
+  },
+
+  cancelFixture(
+    eventId: string,
+    fixtureId: string,
+    payload: CancelFixtureRequest,
+  ) {
+    return ApiService.post(
+      `/api/v1/events/${encodeURIComponent(eventId)}/fixtures/${encodeURIComponent(fixtureId)}/cancel`,
+      payload,
     );
   },
 };

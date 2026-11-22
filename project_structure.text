@@ -57,6 +57,10 @@
                   - SecurityConfig.class
                   - SpringDataWebConfig.class
                 - modules
+                  - Audit
+                    - AuditEvent.class
+                    - AuditEventRepository.class
+                    - AuditService.class
                   - Auth
                     - AuthController.class
                     - AuthResponse.class
@@ -72,6 +76,19 @@
                     - GameVersion.class
                     - GameVersionRepository.class
                   - Event
+                    - Clue
+                      - ClueBoardResponse$Clue.class
+                      - ClueBoardResponse$Stage.class
+                      - ClueBoardResponse$TeamClues.class
+                      - ClueBoardResponse.class
+                      - ClueController.class
+                      - ClueService.class
+                      - ClueSetSaveRequest$Item.class
+                      - ClueSetSaveRequest.class
+                      - SceneClue.class
+                      - SceneClueRepository.class
+                      - SceneEntry.class
+                      - SceneEntryRepository.class
                     - dto
                       - EventCreateRequest.class
                     - Event.class
@@ -113,12 +130,25 @@
                       - JoinRequestRepository.class
                       - JoinRequestResponse.class
                       - JoinRequestService.class
+                    - Live
+                      - EventLiveController.class
+                      - EventLiveService$EventMeta.class
+                      - EventLiveService.class
+                      - EventSnapshotResponse.class
+                      - EventState.class
+                      - EventStateRepository.class
+                      - EventStateUpdateRequest.class
+                      - TeamReadyRequest.class
                     - Membership
+                      - EventMemberRolesResponse.class
                       - EventMembership.class
                       - EventMembershipRepository.class
                       - EventMembershipService.class
+                      - EventRoleController.class
                       - EventRoleGrant.class
                       - EventRoleGrantRepository.class
+                      - EventRoleGrantRequest.class
+                      - EventRoleService.class
                     - Participant
                       - dto
                         - ParticipantTeamAssignRequest.class
@@ -128,10 +158,40 @@
                       - EventParticipantResponse.class
                       - EventParticipantService.class
                     - Scoring
+                      - Adapter
+                        - ExactScore.class
+                        - GameScoreAdapters$Definition.class
+                        - GameScoreAdapters.class
+                        - ScorePreviewController.class
+                        - ScorePreviewService$FixtureInput.class
+                        - ScorePreviewService$FixturePreview.class
+                        - ScorePreviewService$GameOption.class
+                        - ScorePreviewService$PreviewRequest.class
+                        - ScorePreviewService$PreviewResponse.class
+                        - ScorePreviewService$ResultState.class
+                        - ScorePreviewService.class
                       - dto
                         - ScoreboardVisibilityRequest.class
                         - ScoreEntryCreateRequest.class
                         - ScoreEntryReverseRequest.class
+                      - Plan
+                        - ScoringPlan.class
+                        - ScoringPlanController.class
+                        - ScoringPlanRepository.class
+                        - ScoringPlanService$Assignment.class
+                        - ScoringPlanService$SourceFixture.class
+                        - ScoringPlanService.class
+                        - ScoringPlanTypes$Draft.class
+                        - ScoringPlanTypes$FixtureView.class
+                        - ScoringPlanTypes$GameView.class
+                        - ScoringPlanTypes$Opportunity.class
+                        - ScoringPlanTypes$Published.class
+                        - ScoringPlanTypes$PublishRequest.class
+                        - ScoringPlanTypes$Review.class
+                        - ScoringPlanTypes$Selection.class
+                        - ScoringPlanTypes$Setup.class
+                        - ScoringPlanTypes$TeamView.class
+                        - ScoringPlanTypes.class
                       - ScoreboardResponse.class
                       - ScoreboardRowResponse.class
                       - ScoreboardSnapshot.class
@@ -155,7 +215,23 @@
                       - TeamRepository.class
                       - TeamResponse.class
                       - TeamService.class
+                    - Title
+                      - SceneSecret.class
+                      - SceneSecretRepository.class
+                      - TitleAlias.class
+                      - TitleAliasRepository.class
+                      - TitleBoardResponse$TeamTitle.class
+                      - TitleBoardResponse.class
+                      - TitleController.class
+                      - TitleNormalizer.class
+                      - TitleSaveRequest.class
+                      - TitleService.class
                   - Picture
+                    - EventMediaController.class
+                    - EventMediaResponse.class
+                    - EventMediaService.class
+                    - EventMediaValidator$ValidatedMedia.class
+                    - EventMediaValidator.class
                     - MediaAsset.class
                     - MediaAssetRepository.class
                     - Picture.class
@@ -208,6 +284,18 @@
                 - config
                   - JwtValidationConfigTest.class
                 - modules
+                  - Event
+                    - Live
+                      - EventLiveServiceTest.class
+                    - Membership
+                      - EventRoleServiceTest.class
+                    - Scoring
+                      - Adapter
+                        - ExactScoreTest.class
+                    - Title
+                      - TitleNormalizerTest.class
+                  - Picture
+                    - EventMediaServiceTest.class
                   - User
                     - UserServiceTest.class
     - generated
@@ -228,7 +316,19 @@
           - com.murisegames.api.ApiApplicationTests
             - index.html
           - com.murisegames.api.config.JwtValidationConfigTest
+            - index.html
+          - com.murisegames.api.modules.Event.Live.EventLiveServiceTest
+            - index.html
+          - com.murisegames.api.modules.Event.Membership.EventRoleServiceTest
+            - index.html
+          - com.murisegames.api.modules.Event.Scoring.Adapter.ExactScoreTest
+            - index.html
+          - com.murisegames.api.modules.Event.Title.TitleNormalizerTest
+            - index.html
+          - com.murisegames.api.modules.Picture.EventMediaServiceTest
+            - index.html
           - com.murisegames.api.modules.User.UserServiceTest
+            - index.html
           - css
             - base-style.css
             - style.css
@@ -242,6 +342,10 @@
         - application.yaml
         - db
           - migration
+            - V10__add_team_readiness.sql
+            - V11__add_scene_clues.sql
+            - V12__add_scene_titles.sql
+            - V13__add_scoring_plans.sql
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
             - V3__add_murise_app_rls_policies.sql
@@ -249,6 +353,8 @@
             - V5__add_invite_redemption_limits.sql
             - V6__seed_nine_games.sql
             - V7__add_picture_personalization.sql
+            - V8__publish_detailed_game_rules_v2.sql
+            - V9__add_media_asset_visibility.sql
         - static
         - templates
       - test
@@ -259,6 +365,13 @@
           - output-events.bin
           - results-generic.bin
         - TEST-com.murisegames.api.ApiApplicationTests.xml
+        - TEST-com.murisegames.api.config.JwtValidationConfigTest.xml
+        - TEST-com.murisegames.api.modules.Event.Live.EventLiveServiceTest.xml
+        - TEST-com.murisegames.api.modules.Event.Membership.EventRoleServiceTest.xml
+        - TEST-com.murisegames.api.modules.Event.Scoring.Adapter.ExactScoreTest.xml
+        - TEST-com.murisegames.api.modules.Event.Title.TitleNormalizerTest.xml
+        - TEST-com.murisegames.api.modules.Picture.EventMediaServiceTest.xml
+        - TEST-com.murisegames.api.modules.User.UserServiceTest.xml
     - tmp
       - compileJava
         - compileTransaction
@@ -270,6 +383,7 @@
           - backup-dir
           - stash-dir
             - ApiApplicationTests.class.uniqueId0
+            - EventLiveServiceTest.class.uniqueId1
         - previous-compilation-data.bin
       - test
   - build.gradle
@@ -300,6 +414,10 @@
                 - SecurityConfig.java
                 - SpringDataWebConfig.java
               - modules
+                - Audit
+                  - AuditEvent.java
+                  - AuditEventRepository.java
+                  - AuditService.java
                 - Auth
                   - AuthController.java
                   - AuthResponse.java
@@ -315,6 +433,15 @@
                   - GameVersion.java
                   - GameVersionRepository.java
                 - Event
+                  - Clue
+                    - ClueBoardResponse.java
+                    - ClueController.java
+                    - ClueService.java
+                    - ClueSetSaveRequest.java
+                    - SceneClue.java
+                    - SceneClueRepository.java
+                    - SceneEntry.java
+                    - SceneEntryRepository.java
                   - dto
                     - EventCreateRequest.java
                   - Event.java
@@ -355,12 +482,24 @@
                     - JoinRequestRepository.java
                     - JoinRequestResponse.java
                     - JoinRequestService.java
+                  - Live
+                    - EventLiveController.java
+                    - EventLiveService.java
+                    - EventSnapshotResponse.java
+                    - EventState.java
+                    - EventStateRepository.java
+                    - EventStateUpdateRequest.java
+                    - TeamReadyRequest.java
                   - Membership
+                    - EventMemberRolesResponse.java
                     - EventMembership.java
                     - EventMembershipRepository.java
                     - EventMembershipService.java
+                    - EventRoleController.java
                     - EventRoleGrant.java
                     - EventRoleGrantRepository.java
+                    - EventRoleGrantRequest.java
+                    - EventRoleService.java
                   - Participant
                     - dto
                       - ParticipantTeamAssignRequest.java
@@ -370,10 +509,21 @@
                     - EventParticipantResponse.java
                     - EventParticipantService.java
                   - Scoring
+                    - Adapter
+                      - ExactScore.java
+                      - GameScoreAdapters.java
+                      - ScorePreviewController.java
+                      - ScorePreviewService.java
                     - dto
                       - ScoreboardVisibilityRequest.java
                       - ScoreEntryCreateRequest.java
                       - ScoreEntryReverseRequest.java
+                    - Plan
+                      - ScoringPlan.java
+                      - ScoringPlanController.java
+                      - ScoringPlanRepository.java
+                      - ScoringPlanService.java
+                      - ScoringPlanTypes.java
                     - ScoreboardResponse.java
                     - ScoreboardRowResponse.java
                     - ScoreboardSnapshot.java
@@ -395,7 +545,21 @@
                     - TeamRepository.java
                     - TeamResponse.java
                     - TeamService.java
+                  - Title
+                    - SceneSecret.java
+                    - SceneSecretRepository.java
+                    - TitleAlias.java
+                    - TitleAliasRepository.java
+                    - TitleBoardResponse.java
+                    - TitleController.java
+                    - TitleNormalizer.java
+                    - TitleSaveRequest.java
+                    - TitleService.java
                 - Picture
+                  - EventMediaController.java
+                  - EventMediaResponse.java
+                  - EventMediaService.java
+                  - EventMediaValidator.java
                   - MediaAsset.java
                   - MediaAssetRepository.java
                   - Picture.java
@@ -438,6 +602,10 @@
         - application.yaml
         - db
           - migration
+            - V10__add_team_readiness.sql
+            - V11__add_scene_clues.sql
+            - V12__add_scene_titles.sql
+            - V13__add_scoring_plans.sql
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
             - V3__add_murise_app_rls_policies.sql
@@ -445,6 +613,8 @@
             - V5__add_invite_redemption_limits.sql
             - V6__seed_nine_games.sql
             - V7__add_picture_personalization.sql
+            - V8__publish_detailed_game_rules_v2.sql
+            - V9__add_media_asset_visibility.sql
         - static
         - templates
     - test
@@ -456,6 +626,18 @@
               - config
                 - JwtValidationConfigTest.java
               - modules
+                - Event
+                  - Live
+                    - EventLiveServiceTest.java
+                  - Membership
+                    - EventRoleServiceTest.java
+                  - Scoring
+                    - Adapter
+                      - ExactScoreTest.java
+                  - Title
+                    - TitleNormalizerTest.java
+                - Picture
+                  - EventMediaServiceTest.java
                 - User
                   - UserServiceTest.java
       - resources
@@ -479,13 +661,23 @@
         - page.tsx
       - events
         - [eventId]
+          - clues
+            - page.tsx
           - games
+            - page.tsx
+          - host
             - page.tsx
           - invitations
             - page.tsx
           - layout.tsx
           - page.tsx
           - people
+            - page.tsx
+          - play
+            - page.tsx
+          - scoring
+            - page.tsx
+          - tv
             - page.tsx
       - favicon.ico
       - games
@@ -512,6 +704,8 @@
       - Dashboard
         - DashboardView.tsx
       - Event
+        - Clue
+          - CluePanel.tsx
         - EventCreateForm.tsx
         - EventGame
           - EventGamePanel.tsx
@@ -523,13 +717,25 @@
           - JoinView.tsx
         - JoinRequest
           - JoinRequestPanel.tsx
+        - Live
+          - EventLivePanel.tsx
         - Participant
           - ParticipantPanel.tsx
+        - Role
+          - EventRolePanel.tsx
         - Scoring
           - ScoreboardPanel.tsx
+          - ScorePreviewPanel.tsx
+          - ScoringPlanPanel.tsx
+        - Screens
+          - HostControlView.tsx
+          - PlayerScreenView.tsx
+          - TvScreenView.tsx
         - Team
           - TeamForm.tsx
           - TeamPanel.tsx
+        - Title
+          - TitlePanel.tsx
       - Games
         - CatalogView.tsx
         - Rules.tsx
@@ -572,6 +778,11 @@
         - catalog.type.ts
         - index.ts
       - Event
+        - Clue
+          - clue.controller.ts
+          - clue.service.ts
+          - clue.type.ts
+          - index.ts
         - event.controller.ts
         - event.service.ts
         - event.type.ts
@@ -592,13 +803,26 @@
           - join-request.controller.ts
           - join-request.service.ts
           - join-request.type.ts
+        - Live
+          - index.ts
+          - live.controller.ts
+          - live.service.ts
+          - live.type.ts
+          - useEventSnapshot.ts
         - Participant
           - index.ts
           - participant.controller.ts
           - participant.service.ts
           - participant.type.ts
+        - Role
+          - index.ts
+          - role.controller.ts
+          - role.service.ts
+          - role.type.ts
         - Scoring
           - index.ts
+          - score-preview.ts
+          - scoring-plan.ts
           - scoring.controller.ts
           - scoring.service.ts
           - scoring.type.ts
@@ -607,6 +831,11 @@
           - team.controller.ts
           - team.service.ts
           - team.type.ts
+        - Title
+          - index.ts
+          - title.controller.ts
+          - title.service.ts
+          - title.type.ts
       - index.ts
       - Picture
         - picture.controller.ts
@@ -628,4 +857,6 @@
       - vercel.svg
       - window.svg
     - README.md
+    - scripts
+      - rehearse-polling.mjs
     - tsconfig.json

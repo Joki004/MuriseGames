@@ -221,7 +221,7 @@ function PreviewForm({
 }) {
   const nextKey = useRef(2);
   const alive = useRef(true);
-  const resultHeading = useRef<HTMLHeadingElement>(null);
+const resultHeading = useRef<HTMLSpanElement>(null);
 
   const [fixtures, setFixtures] = useState<DraftFixture[]>([
     newFixture(game, 1),

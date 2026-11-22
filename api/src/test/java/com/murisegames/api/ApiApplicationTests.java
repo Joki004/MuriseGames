@@ -11,6 +11,7 @@ import com.murisegames.api.modules.Event.Live.EventStateRepository;
 import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
 import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
 import com.murisegames.api.modules.Event.Participant.EventParticipantRepository;
+import com.murisegames.api.modules.Event.Scoring.Plan.ScoringPlanRepository;
 import com.murisegames.api.modules.Event.Scoring.ScoreEntryRepository;
 import com.murisegames.api.modules.Event.Scoring.ScoreboardSnapshotRepository;
 import com.murisegames.api.modules.Event.Scoring.ScoreboardSnapshotRowRepository;
@@ -110,6 +111,9 @@ class ApiApplicationTests {
 
     @MockitoBean
     private TitleAliasRepository titleAliasRepository;
+
+    @MockitoBean
+    private ScoringPlanRepository scoringPlanRepository;
 
     @Test
     void contextLoads() {

@@ -4,6 +4,9 @@ import {
 } from "@/modules/Api/api.service";
 import { ScoringService } from "./scoring.service";
 import type {
+  CancelFixtureRequest,
+  RankingStatusResponse,
+  RecordFixtureResultRequest,
   ScoreEntryCreateRequest,
   ScoreEntryResponse,
   ScoreboardResponse,
@@ -86,6 +89,53 @@ export const ScoringController = {
     } catch (error: unknown) {
       throw new Error(
         extractApiErrorMessage(error, "Could not reverse score entry.")
+      );
+    }
+  },
+
+  async getRankingStatus(eventId: string): Promise<RankingStatusResponse> {
+    try {
+      const response = await ScoringService.getRankingStatus(eventId);
+      if (!response.data) {
+        throw new Error("Ranking status payload was empty.");
+      }
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not load ranking status."),
+      );
+    }
+  },
+
+  async recordFixtureResult(
+    eventId: string,
+    fixtureId: string,
+    payload: RecordFixtureResultRequest,
+  ) {
+    try {
+      const response = await ScoringService.recordFixtureResult(
+        eventId,
+        fixtureId,
+        payload,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not record fixture result."),
+      );
+    }
+  },
+
+  async cancelFixture(
+    eventId: string,
+    fixtureId: string,
+    payload: CancelFixtureRequest,
+  ): Promise<void> {
+    try {
+      await ScoringService.cancelFixture(eventId, fixtureId, payload);
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not cancel fixture."),
       );
     }
   },
