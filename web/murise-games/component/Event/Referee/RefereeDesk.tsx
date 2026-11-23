@@ -142,13 +142,18 @@ export function RefereeDesk() {
                     Your team plays: another referee or the host records this
                   </Badge>
                 ) : (
-                  <FixtureResultButton
-                    eventId={event.id}
-                    fixture={f}
-                    games={desk.games}
-                    canCancel={false}
-                    onChanged={() => void load()}
-                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {f.teamBusy && (
+                      <Badge tone="warning">Your team plays at this time</Badge>
+                    )}
+                    <FixtureResultButton
+                      eventId={event.id}
+                      fixture={f}
+                      games={desk.games}
+                      canCancel={false}
+                      onChanged={() => void load()}
+                    />
+                  </div>
                 )}
               </li>
             );

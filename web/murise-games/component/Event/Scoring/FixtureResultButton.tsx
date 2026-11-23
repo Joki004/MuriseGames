@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Dialog, Input, Select } from "@/component/ui";
 import {
   ScoringController,
@@ -76,8 +76,33 @@ export function FixtureResultButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
+  // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
+  const [scorable, setScorable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const source = suppliedGames
+      ? Promise.resolve(suppliedGames)
+      : loadGames(eventId);
+    source
+      .then((games) => {
+        const game = games.find((g) => g.eventGameId === fixture.eventGameId);
+        if (active) setScorable(Boolean(game && !game.unavailableReason));
+      })
+      // If the definitions can't be loaded, keep the button: the dialog shows the error.
+      .catch(() => {
+        if (active) setScorable(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [eventId, fixture.eventGameId, suppliedGames]);
 
   if (isBye) return null;
+
+  if (scorable === false) {
+    return <Badge>Not scored</Badge>;
+  }
 
   if (cancelled) {
     return <Badge tone="warning">Cancelled</Badge>;
