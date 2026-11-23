@@ -153,6 +153,22 @@ public class ClueReleaseService {
         return state;
     }
 
+    /**
+     * Shared lock helper for title reveals (GM-018):
+     * locks the same event + guessing_state rows and refuses while guessing is open.
+     */
+    public StateRow lockForReveal(UUID eventId) {
+        StateRow state = lockOrInitState(eventId);
+        requireClosedForReveal(state);
+        return state;
+    }
+
+    static void requireClosedForReveal(StateRow current) {
+        if (!"closed".equals(current.status())) {
+            throw conflict("Close all guessing before revealing any title.");
+        }
+    }
+
     static void validateExpectedState(
             StateRow current,
             int expectedStage,

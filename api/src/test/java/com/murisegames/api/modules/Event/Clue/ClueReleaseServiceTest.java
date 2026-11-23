@@ -34,6 +34,23 @@ class ClueReleaseServiceTest {
     }
 
     @Test
+    void revealIsRefusedWhileGuessingIsOpen() {
+        var open = new ClueReleaseService.StateRow(3, "open", 3L);
+
+        assertThatThrownBy(() -> ClueReleaseService.requireClosedForReveal(open))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT));
+    }
+
+    @Test
+    void revealIsAllowedOnceGuessingIsClosed() {
+        var closed = new ClueReleaseService.StateRow(3, "closed", 4L);
+
+        ClueReleaseService.requireClosedForReveal(closed); // no exception
+    }
+
+    @Test
     void closedGuessingRejectsFurtherStageChangesWith409() {
         var current = new ClueReleaseService.StateRow(3, "closed", 4L);
 

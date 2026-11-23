@@ -2,6 +2,7 @@ import { ApiService } from "@/modules/Api/api.service";
 import type { CustomApiResponse } from "@/modules/Api/api.type";
 import type {
   CancelFixtureRequest,
+  FixtureSettlementResponse,
   RankingStatusResponse,
   RecordFixtureResultRequest,
   ScoreEntryCreateRequest,
@@ -63,7 +64,7 @@ export const ScoringService = {
     fixtureId: string,
     payload: RecordFixtureResultRequest,
   ) {
-    return ApiService.put(
+    return ApiService.put<FixtureSettlementResponse>(
       `/api/v1/events/${encodeURIComponent(eventId)}/fixtures/${encodeURIComponent(fixtureId)}/result`,
       payload,
     );

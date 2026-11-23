@@ -92,6 +92,14 @@ public class TitleService {
                 });
         UUID sceneId = entry.getId();
 
+        // GM-018: a revealed title is final; changing it would rewrite what was scored.
+        if (entryRepository.isRevealed(eventId, sceneId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This title has already been revealed and can no longer be changed."
+            );
+        }
+
         SceneSecret secret = secretRepository.findById(sceneId)
                 .orElseGet(() -> {
                     SceneSecret created = new SceneSecret();

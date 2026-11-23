@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useEventDetail } from "@/component/Event/EventShell";
+import { FixtureResultButton } from "@/component/Event/Scoring/FixtureResultButton";
 import {
   Alert,
   Badge,
@@ -433,6 +434,13 @@ const [games, setGames] = useState<EventGameResponse[]>([]);
                     >
                       Remove
                     </Button>
+                  )}
+                  {canManage && !isDraft && detail && (
+                    <FixtureResultButton
+                      eventId={event.id}
+                      fixture={{ ...f, fixtureId: f.id }}
+                      onChanged={() => void selectSchedule(detail.id)}
+                    />
                   )}
                 </div>
               </li>

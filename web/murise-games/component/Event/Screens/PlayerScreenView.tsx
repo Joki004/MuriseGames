@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
 import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
 import { PageShell } from "@/component/Layout/PageShell";
 import {
@@ -234,6 +235,8 @@ export function PlayerScreenView() {
             </p>
           )}
         </Card>
+
+        <RevealBoard eventId={eventId} />
 
         <SecretSceneGuessPanel
           eventId={eventId}

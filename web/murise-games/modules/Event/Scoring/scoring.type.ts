@@ -4,7 +4,9 @@ export type ScoreCategory =
   | "bonus"
   | "penalty"
   | "adjustment"
-  | "reversal";
+  | "reversal"
+  | "guess_points"
+  | "performer_bonus";
 
 export interface ScoreboardRowResponse {
   teamId: string;
@@ -74,4 +76,23 @@ export interface RecordFixtureResultRequest {
 
 export interface CancelFixtureRequest {
   reason: string;
+}
+
+export interface TeamSettlement {
+  teamId: string;
+  fixtureRawScore: number;
+  cumulativeRawScore: number;
+  frozenDenominator: number;
+  settledTotal: number;
+  deltaPosted: number;
+  displayTotal: string;
+  revision: number;
+}
+
+export interface FixtureSettlementResponse {
+  eventId: string;
+  eventGameId: string;
+  fixtureId: string;
+  status: string;
+  teams: TeamSettlement[];
 }
