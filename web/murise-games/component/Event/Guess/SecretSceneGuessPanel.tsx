@@ -20,15 +20,19 @@ import {
   type CaptainGuessBoardResponse,
   type SubmitGuessRequest,
 } from "@/modules/Event/Guess";
+import { guessPointsForStage, stageTierLabel } from "./guessTier";
 
 interface SecretSceneGuessPanelProps {
   eventId: string;
   snapshotVersion?: number;
+  /** Changes when the host releases clues or closes guessing: refetch then. */
+  guessingVersion?: number;
 }
 
 export function SecretSceneGuessPanel({
   eventId,
   snapshotVersion,
+  guessingVersion,
 }: SecretSceneGuessPanelProps) {
   const [board, setBoard] = useState<CaptainGuessBoardResponse | null>(null);
   const [released, setReleased] = useState<ReleasedCluesResponse | null>(null);
@@ -69,7 +73,7 @@ export function SecretSceneGuessPanel({
     return () => {
       active = false;
     };
-  }, [eventId, snapshotVersion]);
+  }, [eventId, snapshotVersion, guessingVersion]);
 
   async function refreshState() {
     const [b, r] = await Promise.all([
@@ -153,6 +157,16 @@ export function SecretSceneGuessPanel({
               Stage {currentStage} of 3 · One guess per opposing team per stage.
               Verdicts remain secret until the finale.
             </CardDescription>
+            {!isClosed && (
+              <p className="mt-2 text-sm">
+                A correct guess now earns{" "}
+                <strong>{guessPointsForStage(currentStage)} points</strong>{" "}
+                <span className="text-muted">
+                  ({stageTierLabel(currentStage)}). Only your earliest correct
+                  guess counts.
+                </span>
+              </p>
+            )}
           </div>
           <Badge tone={isClosed ? "warning" : "success"}>
             {isClosed ? "Guessing closed" : `Stage ${currentStage} open`}

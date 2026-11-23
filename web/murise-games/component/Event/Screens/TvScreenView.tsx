@@ -4,6 +4,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
+import {
+  guessPointsForStage,
+  stageTierLabel,
+} from "@/component/Event/Guess/guessTier";
 import { Badge, Card } from "@/component/ui";
 import { EventController, type EventDetailResponse } from "@/modules/Event";
 import {
@@ -62,7 +66,7 @@ export function TvScreenView() {
     void ClueController.getReleased(eventId)
       .then(setReleasedClues)
       .catch(() => setReleasedClues(null));
-  }, [eventId, snapshot?.version]);
+  }, [eventId, snapshot?.version, snapshot?.guessingVersion]);
 
   useEffect(() => {
     if (!snapshot?.deadlineAt || snapshot.paused) return;
@@ -231,15 +235,24 @@ export function TvScreenView() {
               <h2 className="text-2xl font-bold">
                 Secret Scene Clues · Stage {releasedClues.currentStage} of 3
               </h2>
-              <Badge
-                tone={
-                  releasedClues.status === "closed" ? "warning" : "success"
-                }
-              >
-                {releasedClues.status === "closed"
-                  ? "Guessing closed"
-                  : "Guessing open"}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                {releasedClues.status !== "closed" && (
+                  <Badge tone="accent">
+                    Correct guess now:{" "}
+                    {guessPointsForStage(releasedClues.currentStage)} pts (
+                    {stageTierLabel(releasedClues.currentStage)})
+                  </Badge>
+                )}
+                <Badge
+                  tone={
+                    releasedClues.status === "closed" ? "warning" : "success"
+                  }
+                >
+                  {releasedClues.status === "closed"
+                    ? "Guessing closed"
+                    : "Guessing open"}
+                </Badge>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

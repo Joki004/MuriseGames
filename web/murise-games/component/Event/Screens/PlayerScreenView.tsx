@@ -244,6 +244,7 @@ export function PlayerScreenView() {
         <SecretSceneGuessPanel
           eventId={eventId}
           snapshotVersion={snapshot?.version}
+          guessingVersion={snapshot?.guessingVersion}
         />
       </PageShell>
     </RequireAccount>

@@ -66,6 +66,10 @@ class EventLiveServiceTest {
         when(entityManager.createNativeQuery(contains("event_team_readiness"))).thenReturn(readyQuery);
         when(readyQuery.setParameter(eq("eventId"), eq(eventId))).thenReturn(readyQuery);
         when(readyQuery.getResultList()).thenReturn(List.of());
+        Query guessingQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(contains("guessing_state"))).thenReturn(guessingQuery);
+        when(guessingQuery.setParameter(eq("eventId"), eq(eventId))).thenReturn(guessingQuery);
+        when(guessingQuery.getResultList()).thenReturn(List.of());
     }
 
     @Test

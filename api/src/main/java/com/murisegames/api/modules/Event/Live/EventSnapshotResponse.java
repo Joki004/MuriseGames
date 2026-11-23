@@ -20,7 +20,12 @@ public record EventSnapshotResponse(
         boolean paused,
         Instant stateUpdatedAt,
         Set<UUID> readyTeamIds,
-        List<ActiveFixtureView> activeFixtures
+        List<ActiveFixtureView> activeFixtures,
+        // GM-027: Secret Scene guessing state. Screens refetch clues when guessingVersion
+        // changes, so a clue release reaches every phone and the TV on the next poll.
+        int guessingStage,
+        String guessingStatus,
+        long guessingVersion
 ) {
 
     public EventSnapshotResponse(
@@ -53,7 +58,10 @@ public record EventSnapshotResponse(
                 paused,
                 stateUpdatedAt,
                 readyTeamIds,
-                List.of()
+                List.of(),
+                0,
+                "open",
+                0L
         );
     }
 
