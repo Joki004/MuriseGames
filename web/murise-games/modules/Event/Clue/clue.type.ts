@@ -31,3 +31,32 @@ export interface ClueSaveItem {
 export interface ClueSetSaveRequest {
   clues: ClueSaveItem[];
 }
+
+export interface StageCommandRequest {
+  requestId: string;
+  expectedStage: number;
+  expectedVersion: number;
+}
+
+export interface PublicClue {
+  teamId: string;
+  teamName: string;
+  teamColor: string;
+  stage: number;
+  body: string;
+}
+
+export interface ReleaseRecord {
+  stage: number;
+  releasedBy: string;
+  releasedAt: string;
+}
+
+export interface ReleasedCluesResponse {
+  eventId: string;
+  currentStage: number;
+  status: "open" | "closed" | string;
+  version: number;
+  releases: ReleaseRecord[];
+  clues: PublicClue[];
+}
