@@ -14,6 +14,10 @@ export interface EventSnapshotResponse {
   stateUpdatedAt: string | null;
   readyTeamIds: string[];
   activeFixtures?: ActiveFixtureView[];
+  /** GM-027: Secret Scene guessing state; changes when clues are released or guessing closes. */
+  guessingStage?: number;
+  guessingStatus?: "open" | "closed" | string;
+  guessingVersion?: number;
 }
 
 export interface EventStateUpdateRequest {

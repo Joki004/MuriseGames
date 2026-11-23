@@ -236,6 +236,7 @@ public class EventLiveService {
             Instant serverTime
     ) {
         Set<UUID> readyTeamIds = loadReadyTeamIds(eventId);
+        GuessingView guessing = loadGuessing(eventId);
 
         if (state == null) {
             return new EventSnapshotResponse(
@@ -253,7 +254,10 @@ public class EventLiveService {
                     false,
                     null,
                     readyTeamIds,
-                    List.of()
+                    List.of(),
+                    guessing.stage(),
+                    guessing.status(),
+                    guessing.version()
             );
         }
 
@@ -275,7 +279,34 @@ public class EventLiveService {
                 state.getPausedRemainingMs() != null,
                 state.getUpdatedAt(),
                 readyTeamIds,
-                activeFixtures
+                activeFixtures,
+                guessing.stage(),
+                guessing.status(),
+                guessing.version()
+        );
+    }
+
+    /** Public guessing state only: stage, open/closed and version. Never clue text. */
+    private record GuessingView(int stage, String status, long version) {
+    }
+
+    private GuessingView loadGuessing(UUID eventId) {
+        List<?> rows = entityManager.createNativeQuery("""
+                SELECT current_stage, status, version
+                FROM murise.guessing_state
+                WHERE event_id = :eventId
+                """)
+                .setParameter("eventId", eventId)
+                .getResultList();
+
+        if (rows == null || rows.isEmpty()) {
+            return new GuessingView(0, "open", 0L);
+        }
+        Object[] row = (Object[]) rows.getFirst();
+        return new GuessingView(
+                ((Number) row[0]).intValue(),
+                row[1].toString(),
+                ((Number) row[2]).longValue()
         );
     }
 
