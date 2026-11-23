@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { PageShell } from "@/component/Layout/PageShell";
 import {
@@ -17,9 +17,13 @@ import {
   Input,
   Select,
 } from "@/component/ui";
-import { extractApiErrorMessage } from "@/modules/Api/api.service";
-import { EventGameController, type EventGameResponse } from "@/modules/Event/EventGame";
+import { ApiService, extractApiErrorMessage } from "@/modules/Api/api.service";
+import {
+  EventGameController,
+  type EventGameResponse,
+} from "@/modules/Event/EventGame";
 import { EventLiveController, useEventSnapshot } from "@/modules/Event/Live";
+import type { ScheduleDetail, ScheduleSummary } from "@/modules/Event/Schedule";
 import { TeamController, type TeamResponse } from "@/modules/Event/Team";
 
 const PRESETS = [
@@ -37,6 +41,13 @@ function formatMs(ms: number) {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+function formatSlotTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function HostControlView() {
   const { eventId } = useParams<{ eventId: string }>();
   const { snapshot, clockOffsetMs, error, applySnapshot, refetch } =
@@ -44,6 +55,8 @@ export function HostControlView() {
 
   const [games, setGames] = useState<EventGameResponse[]>([]);
   const [teams, setTeams] = useState<TeamResponse[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleDetail | null>(null);
+  const [selectedWindowStartAt, setSelectedWindowStartAt] = useState("");
   const [selectedGameId, setSelectedGameId] = useState("");
   const [phase, setPhase] = useState("active_round");
   const [seconds, setSeconds] = useState("60");
@@ -52,13 +65,25 @@ export function HostControlView() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
-useEffect(() => {
+  useEffect(() => {
     void Promise.all([
       EventGameController.list(eventId),
       TeamController.list(eventId),
-    ]).then(([g, t]) => {
+      ApiService.get<ScheduleSummary[]>(
+        `/api/v1/events/${encodeURIComponent(eventId)}/schedules`,
+      ),
+    ]).then(async ([g, t, schedRes]) => {
       setGames(g);
       setTeams(t.teams);
+      const list = schedRes.data ?? [];
+      const chosen =
+        list.find((s) => s.status === "published") ?? list[0] ?? null;
+      if (chosen) {
+        const detailRes = await ApiService.get<ScheduleDetail>(
+          `/api/v1/events/${encodeURIComponent(eventId)}/schedules/${encodeURIComponent(chosen.id)}`,
+        );
+        setSchedule(detailRes.data ?? null);
+      }
     });
   }, [eventId]);
 
@@ -68,19 +93,68 @@ useEffect(() => {
     return () => clearInterval(id);
   }, [snapshot?.deadlineAt, snapshot?.paused]);
 
+  const timeWindows = useMemo(() => {
+    if (!schedule) return [];
+    const map = new Map<
+      string,
+      {
+        startAt: string;
+        endAt: string;
+        fixtures: ScheduleDetail["fixtures"];
+      }
+    >();
+    for (const f of schedule.fixtures) {
+      const existing = map.get(f.startAt);
+      if (existing) {
+        existing.fixtures.push(f);
+      } else {
+        map.set(f.startAt, {
+          startAt: f.startAt,
+          endAt: f.endAt,
+          fixtures: [f],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [schedule]);
+
   const remainingMs = (() => {
     if (!snapshot) return null;
     if (snapshot.paused && snapshot.pausedRemainingMs != null) {
       return snapshot.pausedRemainingMs;
     }
     if (snapshot.deadlineAt) {
-      return Math.max(0, Date.parse(snapshot.deadlineAt) - (nowMs + clockOffsetMs));
+      return Math.max(
+        0,
+        Date.parse(snapshot.deadlineAt) - (nowMs + clockOffsetMs),
+      );
     }
     return null;
   })();
 
   const activeGame = games.find((g) => g.id === snapshot?.currentEventGameId);
   const readySet = new Set(snapshot?.readyTeamIds ?? []);
+
+  function handleSelectWindow(startAt: string) {
+    setSelectedWindowStartAt(startAt);
+    if (!startAt) return;
+    const win = timeWindows.find((w) => w.startAt === startAt);
+    if (!win) return;
+
+    const distinctGameIds = Array.from(
+      new Set(win.fixtures.map((f) => f.eventGameId)),
+    );
+    setSelectedGameId(distinctGameIds.length === 1 ? distinctGameIds[0] : "");
+    setPhase("active_round");
+
+    const durSec = Math.max(
+      0,
+      Math.round((Date.parse(win.endAt) - Date.parse(win.startAt)) / 1000),
+    );
+    if (durSec > 0) {
+      setSeconds(String(durSec));
+    }
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -98,13 +172,19 @@ useEffect(() => {
     <RequireAccount>
       <PageShell
         title="Host control deck"
-        description="Select the active game, drive the server timer, and monitor team readiness."
+        description="Select a scheduled time window or active game, drive the server timer, and monitor team readiness."
         action={
           <div className="flex flex-wrap gap-2">
-            <Link href={`/events/${eventId}/tv`} className="ui-button ui-button--secondary">
+            <Link
+              href={`/events/${eventId}/tv`}
+              className="ui-button ui-button--secondary"
+            >
               Open TV screen
             </Link>
-            <Link href={`/events/${eventId}`} className="ui-button ui-button--secondary">
+            <Link
+              href={`/events/${eventId}`}
+              className="ui-button ui-button--secondary"
+            >
               Back to event
             </Link>
           </div>
@@ -121,12 +201,16 @@ useEffect(() => {
                 <div>
                   <CardTitle>Current live state</CardTitle>
                   <CardDescription>
-                    {activeGame ? activeGame.name : "No game selected"}
+                    {snapshot?.currentWindowStartAt
+                      ? `Scheduled window (${formatSlotTime(snapshot.currentWindowStartAt)})`
+                      : activeGame
+                        ? activeGame.name
+                        : "No game selected"}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Badge tone={snapshot?.paused ? "warning" : "success"}>
-                    {snapshot?.paused ? "Paused" : snapshot?.phase ?? "lobby"}
+                    {snapshot?.paused ? "Paused" : (snapshot?.phase ?? "lobby")}
                   </Badge>
                   <Badge>v{snapshot?.version ?? 0}</Badge>
                 </div>
@@ -144,7 +228,7 @@ useEffect(() => {
                     disabled={busy}
                     onClick={() =>
                       void run(async () =>
-                        applySnapshot(await EventLiveController.pause(eventId))
+                        applySnapshot(await EventLiveController.pause(eventId)),
                       )
                     }
                   >
@@ -156,26 +240,97 @@ useEffect(() => {
                     disabled={busy}
                     onClick={() =>
                       void run(async () =>
-                        applySnapshot(await EventLiveController.resume(eventId))
+                        applySnapshot(
+                          await EventLiveController.resume(eventId),
+                        ),
                       )
                     }
                   >
                     Resume
                   </Button>
                 )}
-                <Button variant="secondary" disabled={busy} onClick={() => void refetch()}>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void refetch()}
+                >
                   Sync
                 </Button>
               </div>
             </div>
 
+            {(snapshot?.activeFixtures?.length ?? 0) > 0 && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Active pairings ({snapshot!.activeFixtures!.length})
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {snapshot!.activeFixtures!.map((f) => {
+                    const isBye = f.teams.some((t) => t.side === "bye");
+                    return (
+                      <div
+                        key={f.fixtureId}
+                        className="rounded-[var(--ui-radius-control)] border border-border bg-background/50 px-3 py-2 text-sm"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge>{f.gameName}</Badge>
+                          {f.resourceName && (
+                            <span className="text-xs text-muted">
+                              {f.resourceName}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 font-semibold">
+                          {isBye
+                            ? `${f.teams[0]?.teamName ?? "Team"} (Resting / Bye)`
+                            : f.teams.map((t) => t.teamName).join(" vs ")}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3 border-t border-border pt-4">
+              {timeWindows.length > 0 && (
+                <Select
+                  label="Scheduled time window (launches concurrent games together)"
+                  value={selectedWindowStartAt}
+                  onChange={(e) => handleSelectWindow(e.target.value)}
+                >
+                  <option value="">— Manual single-game mode —</option>
+                  {timeWindows.map((w) => {
+                    const summary = w.fixtures
+                      .map((f) => {
+                        const isBye = f.teams.some((t) => t.side === "bye");
+                        const label = isBye
+                          ? `${f.teams[0]?.teamName ?? "Team"} (Bye)`
+                          : f.teams.map((t) => t.teamName).join(" vs ");
+                        return `${f.gameName}: ${label}`;
+                      })
+                      .join(" | ");
+                    return (
+                      <option key={w.startAt} value={w.startAt}>
+                        {formatSlotTime(w.startAt)}–{formatSlotTime(w.endAt)} ·{" "}
+                        {summary}
+                      </option>
+                    );
+                  })}
+                </Select>
+              )}
+
               <Select
-                label="Active game"
+                label="Active game (single-game override)"
                 value={selectedGameId}
-                onChange={(e) => setSelectedGameId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedWindowStartAt("");
+                  setSelectedGameId(e.target.value);
+                }}
               >
-                <option value="">— No game (Lobby / Intermission) —</option>
+                <option value="">
+                  — No single game (Lobby / Multi-game window) —
+                </option>
                 {games.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name} ({g.status})
@@ -219,11 +374,17 @@ useEffect(() => {
                   onClick={() =>
                     void run(async () => {
                       const duration = Number.parseInt(seconds, 10);
-                      const updated = await EventLiveController.updateState(eventId, {
-                        currentEventGameId: selectedGameId || null,
-                        phase: phase.trim(),
-                        durationSeconds: Number.isNaN(duration) ? null : duration,
-                      });
+                      const updated = await EventLiveController.updateState(
+                        eventId,
+                        {
+                          currentEventGameId: selectedGameId || null,
+                          windowStartAt: selectedWindowStartAt || null,
+                          phase: phase.trim(),
+                          durationSeconds: Number.isNaN(duration)
+                            ? null
+                            : duration,
+                        },
+                      );
                       applySnapshot(updated);
                     })
                   }
@@ -277,7 +438,7 @@ useEffect(() => {
           </Card>
         </div>
 
-       <Dialog
+        <Dialog
           open={confirmReset}
           onOpenChange={setConfirmReset}
           title="Reset live event state?"

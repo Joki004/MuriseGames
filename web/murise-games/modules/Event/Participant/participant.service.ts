@@ -37,4 +37,11 @@ export const ParticipantService = {
     if (Array.isArray(data)) return data;
     return data.teams ?? data.content ?? [];
   },
+
+  setCaptain(eventId: string, participantId: string, captain: boolean) {
+    return ApiService.patch<EventParticipantResponse>(
+      `/api/events/${encodeURIComponent(eventId)}/participants/${encodeURIComponent(participantId)}/captain`,
+      { captain },
+    );
+  },
 };

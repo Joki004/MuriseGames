@@ -16,7 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.murisegames.api.modules.Event.Schedule.ScheduleTypes.*;
 
@@ -140,20 +139,35 @@ public class ScheduleService {
         List<BalancedScheduleGenerator.GameInput> games = loadSelectedGames(eventId, request.eventGameIds());
         List<UUID> teamIds = activeTeams.stream().map(Team::getId).toList();
 
+        List<ResourceView> resources = listResources(jwt, eventId);
+        Integer maxConcurrentStations = resources.isEmpty() ? null : resources.size();
+
         var generated = BalancedScheduleGenerator.generate(
                 teamIds,
                 games,
                 request.startAt(),
                 request.slotMinutes(),
                 request.breakMinutes(),
-                request.seed()
+                request.seed(),
+                maxConcurrentStations
         );
 
         UUID scheduleId = insertScheduleVersion(
-                eventId, "balanced", "balanced-v1", generated.seed()
+                eventId, "balanced", "balanced-v2", generated.seed()
         );
 
+        Map<Instant, Integer> resourceCursorByWindow = new HashMap<>();
+
         for (var slot : generated.slots()) {
+            UUID assignedResource = null;
+            if (!slot.bye() && !resources.isEmpty()) {
+                int idx = resourceCursorByWindow.getOrDefault(slot.startAt(), 0);
+                if (idx < resources.size()) {
+                    assignedResource = resources.get(idx).id();
+                    resourceCursorByWindow.put(slot.startAt(), idx + 1);
+                }
+            }
+
             insertSlotAndFixture(
                     eventId,
                     scheduleId,
@@ -163,7 +177,7 @@ public class ScheduleService {
                     slot.endAt(),
                     slot.teamIds(),
                     slot.bye(),
-                    null
+                    assignedResource
             );
         }
 

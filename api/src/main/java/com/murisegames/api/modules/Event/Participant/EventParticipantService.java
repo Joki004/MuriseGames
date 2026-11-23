@@ -73,7 +73,7 @@ public class EventParticipantService {
                 throw new IllegalStateException("Cannot assign a participant to an inactive team.");
             }
         }
-
+        participant.setCaptain(false);
         participant.setTeamId(targetTeamId);
         participantRepository.saveAndFlush(participant);
         entityManager.refresh(participant);
@@ -120,5 +120,45 @@ public class EventParticipantService {
         participantRepository.saveAndFlush(participant);
         entityManager.refresh(participant);
         return participant;
+    }
+
+    @Transactional
+    public EventParticipantResponse setCaptain(
+            Jwt jwt,
+            UUID eventId,
+            UUID participantId,
+            boolean captain
+    ) {
+        UUID actorId = userService.extractUserId(jwt);
+        membershipService.requireOrganizer(eventId, actorId);
+
+        EventParticipant participant = participantRepository
+                .findByIdAndEventId(participantId, eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Participant not found."));
+
+        if (captain) {
+            if (!STATUS_ACTIVE.equals(participant.getStatus())) {
+                throw new IllegalStateException("Only an active participant can be named captain.");
+            }
+            if (participant.getTeamId() == null) {
+                throw new IllegalStateException("Assign this participant to a team before naming them captain.");
+            }
+
+            // Ensure at most one captain per team.
+            List<EventParticipant> teammates = participantRepository
+                    .findByEventIdAndTeamId(eventId, participant.getTeamId());
+            for (EventParticipant teammate : teammates) {
+                if (!teammate.getId().equals(participant.getId()) && teammate.isCaptain()) {
+                    teammate.setCaptain(false);
+                    participantRepository.saveAndFlush(teammate);
+                }
+            }
+        }
+
+        participant.setCaptain(captain);
+        participantRepository.saveAndFlush(participant);
+        entityManager.refresh(participant);
+
+        return EventParticipantResponse.from(participant);
     }
 }

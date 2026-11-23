@@ -50,9 +50,9 @@ public class TeamService {
     ) {
         lockForManagement(jwt, eventId);
 
-        if (teamRepository.hasSchedule(eventId)) {
+        if (teamRepository.hasPublishedScheduleOrPlay(eventId)) {
             throw conflict(
-                    "Adding teams after scheduling requires schedule regeneration."
+                    "Teams cannot be added after a schedule is published or play has started."
             );
         }
 
