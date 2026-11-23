@@ -26,6 +26,10 @@ interface FixtureResultButtonProps {
   fixture: ResultFixture;
   /** Called after a result is saved or the fixture is cancelled. */
   onChanged?: () => void;
+  /** Game definitions supplied by the caller (referees cannot load the organizer list). */
+  games?: ScorePreviewGame[];
+  /** Cancelling a match is organizer-only. */
+  canCancel?: boolean;
 }
 
 // Game definitions rarely change during an event; load them once per event.
@@ -56,6 +60,8 @@ export function FixtureResultButton({
   eventId,
   fixture,
   onChanged,
+  games: suppliedGames,
+  canCancel = true,
 }: FixtureResultButtonProps) {
   const playing = fixture.teams.filter((t) => t.side !== "bye");
   const isBye = fixture.teams.some((t) => t.side === "bye");
@@ -84,7 +90,7 @@ export function FixtureResultButton({
     setCancelMode(false);
     setReason(completed ? "" : "Official result");
     try {
-      const games = await loadGames(eventId);
+      const games = suppliedGames ?? (await loadGames(eventId));
       const found = games.find((g) => g.eventGameId === fixture.eventGameId);
       if (!found) {
         setError("This game has no scoring definition.");
@@ -411,7 +417,7 @@ export function FixtureResultButton({
                 >
                   Close
                 </Button>
-                {!completed && (
+                {!completed && canCancel && (
                   <Button
                     variant="danger"
                     disabled={busy}

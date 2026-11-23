@@ -29,6 +29,17 @@ export interface EventCreateRequest {
   visibility: EventVisibility;
 }
 
+export type EventUpdateRequest = EventCreateRequest;
+
+export interface EventUpdateInput {
+  name: string;
+  theme: string;
+  startsAtLocal: string;
+  timezone: string;
+  venue: string;
+  visibility: EventVisibility;
+}
+
 export interface EventCreateInput {
   name: string;
   theme: string;

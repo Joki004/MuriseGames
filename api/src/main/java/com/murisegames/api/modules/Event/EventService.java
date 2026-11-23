@@ -4,7 +4,9 @@ import com.murisegames.api.modules.Event.Membership.EventMembership;
 import com.murisegames.api.modules.Event.Membership.EventMembershipRepository;
 import com.murisegames.api.modules.Event.Membership.EventRoleGrant;
 import com.murisegames.api.modules.Event.Membership.EventRoleGrantRepository;
+import com.murisegames.api.modules.Audit.AuditService;
 import com.murisegames.api.modules.Event.dto.EventCreateRequest;
+import com.murisegames.api.modules.Event.dto.EventUpdateRequest;
 import com.murisegames.api.modules.User.User;
 import com.murisegames.api.modules.User.UserService;
 import jakarta.persistence.EntityManager;
@@ -20,6 +22,11 @@ import org.springframework.web.server.ResponseStatusException;
 import com.murisegames.api.modules.Event.Membership.EventMembershipService;
 import jakarta.persistence.EntityNotFoundException;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.time.ZoneId;
 import java.util.UUID;
@@ -34,6 +41,7 @@ public class EventService {
     private final UserService userService;
     private final EntityManager entityManager;
     private final EventMembershipService membershipService;
+    private final AuditService auditService;
 
     @Transactional
     public EventResponse create(Jwt jwt, EventCreateRequest request) {
@@ -122,6 +130,68 @@ public class EventService {
                 EventResponse.from(event),
                 roles
         );
+    }
+
+    /**
+     * Organizers edit name, theme, start time, timezone, venue and joining policy.
+     * Closed events (completed/archived) are read-only. Changes are audited by field name.
+     */
+    @Transactional
+    public EventDetailResponse update(Jwt jwt, UUID eventId, EventUpdateRequest request) {
+        UUID userId = userService.extractUserId(jwt);
+        membershipService.requireOrganizer(eventId, userId);
+
+        Event event = eventRepository.lockById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found."));
+
+        if ("completed".equals(event.getStatus()) || "archived".equals(event.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This event is closed and its details can no longer be changed."
+            );
+        }
+
+        String timezone = request.timezone().trim();
+        if (!ZoneId.getAvailableZoneIds().contains(timezone)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Use a valid timezone such as Europe/Warsaw."
+            );
+        }
+
+        String name = request.name().trim();
+        String theme = optionalText(request.theme());
+        Instant startsAt = request.startsAt().toInstant();
+        String venue = optionalText(request.venue());
+        String visibility = request.visibility();
+
+        List<String> changed = new ArrayList<>();
+        if (!Objects.equals(event.getName(), name)) changed.add("name");
+        if (!Objects.equals(event.getTheme(), theme)) changed.add("theme");
+        if (!Objects.equals(event.getStartsAt(), startsAt)) changed.add("startsAt");
+        if (!Objects.equals(event.getTimezone(), timezone)) changed.add("timezone");
+        if (!Objects.equals(event.getVenue(), venue)) changed.add("venue");
+        if (!Objects.equals(event.getVisibility(), visibility)) changed.add("visibility");
+
+        if (!changed.isEmpty()) {
+            event.setName(name);
+            event.setTheme(theme);
+            event.setStartsAt(startsAt);
+            event.setTimezone(timezone);
+            event.setVenue(venue);
+            event.setVisibility(visibility);
+
+            eventRepository.saveAndFlush(event);
+            entityManager.refresh(event);
+
+            auditService.record(
+                    eventId, userId, "event.updated", "event", eventId,
+                    Map.of("changedFields", List.copyOf(changed))
+            );
+        }
+
+        Set<String> roles = membershipService.requireAccess(eventId, userId);
+        return new EventDetailResponse(EventResponse.from(event), roles);
     }
 
     private String optionalText(String value) {

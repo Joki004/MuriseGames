@@ -2,6 +2,7 @@ package com.murisegames.api.modules.Event.Scoring.Settlement;
 
 import com.murisegames.api.modules.Event.EventRepository;
 import com.murisegames.api.modules.Event.Membership.EventMembershipService;
+import com.murisegames.api.modules.Event.Referee.RefereeService;
 import com.murisegames.api.modules.Event.Scoring.Adapter.ExactScore;
 import com.murisegames.api.modules.Event.Scoring.Adapter.GameScoreAdapters;
 import com.murisegames.api.modules.Event.Scoring.Plan.ScoringPlan;
@@ -28,6 +29,7 @@ public class OfficialResultService {
     private final ScoringPlanRepository planRepository;
     private final EventRepository eventRepository;
     private final EventMembershipService membershipService;
+    private final RefereeService refereeService;
     private final UserService userService;
     private final EntityManager entityManager;
 
@@ -39,7 +41,14 @@ public class OfficialResultService {
             RecordFixtureResultRequest request
     ) {
         UUID actorId = userService.extractUserId(jwt);
-        membershipService.requireOrganizer(eventId, actorId);
+        // Organizers, or a referee assigned to this game (checked below once the
+        // fixture's game and teams are known).
+        Set<String> roles = membershipService.requireAccess(eventId, actorId);
+        if (!roles.contains(RefereeService.ROLE_ORGANIZER)
+                && !roles.contains(RefereeService.ROLE_REFEREE)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Organizer or assigned referee permission required.");
+        }
         eventRepository.lockById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found."));
 
@@ -47,6 +56,8 @@ public class OfficialResultService {
                 .orElseThrow(() -> conflict("Publish a scoring plan before recording official results."));
 
         PlannedFixture planned = findPlannedFixture(plan.getSnapshot(), fixtureId);
+        refereeService.requireCanRecordResult(
+                eventId, actorId, planned.eventGameId(), planned.teamIds());
         if (planned.bye()) {
             throw badRequest("Bye fixtures do not accept scores.");
         }

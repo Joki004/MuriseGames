@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { AsyncContent } from "@/component/ui/AsyncContent";
 import { Badge } from "@/component/ui";
@@ -10,19 +16,45 @@ import { EventController } from "@/modules/Event/event.controller";
 import type { EventDetailResponse } from "@/modules/Event/event.type";
 import { formatEventTime } from "@/component/Dashboard/DashboardView";
 import { PictureControl } from "@/component/Picture/PictureControl";
-const EventContext = createContext<EventDetailResponse | null>(null);
+import { EventEditButton } from "@/component/Event/EventEditDialog";
+
+interface EventContextValue {
+  detail: EventDetailResponse;
+  replaceDetail: (next: EventDetailResponse) => void;
+}
+
+const EventContext = createContext<EventContextValue | null>(null);
 
 export function useEventDetail() {
-  const detail = useContext(EventContext);
+  const context = useContext(EventContext);
 
-  if (!detail) {
+  if (!context) {
     throw new Error("Event pages must be rendered inside EventShell.");
   }
 
   return {
-    ...detail,
-    canManage: detail.roles.includes("ORGANIZER"),
+    ...context.detail,
+    canManage: context.detail.roles.includes("ORGANIZER"),
+    /** Swap in fresh event details after an edit, without reloading the page. */
+    replaceDetail: context.replaceDetail,
   };
+}
+
+/** Holds the loaded event so edits can update every page in place. */
+function EventProvider({
+  initial,
+  children,
+}: {
+  initial: EventDetailResponse;
+  children: ReactNode;
+}) {
+  const [detail, setDetail] = useState(initial);
+
+  return (
+    <EventContext.Provider value={{ detail, replaceDetail: setDetail }}>
+      {children}
+    </EventContext.Provider>
+  );
 }
 
 export function EventShell({ children }: { children: ReactNode }) {
@@ -60,10 +92,10 @@ function EventLoader({
 
       <AsyncContent load={load} label="Opening event…">
         {(detail) => (
-          <EventContext.Provider value={detail}>
+          <EventProvider initial={detail}>
             <EventHeader />
             <div className="min-w-0">{children}</div>
-          </EventContext.Provider>
+          </EventProvider>
         )}
       </AsyncContent>
     </main>
@@ -72,7 +104,7 @@ function EventLoader({
 
 function EventHeader() {
   const pathname = usePathname();
-  const { event, canManage } = useEventDetail();
+  const { event, roles, canManage, replaceDetail } = useEventDetail();
   const base = `/events/${event.id}`;
 
   const links = [
@@ -86,6 +118,9 @@ function EventHeader() {
           { href: `${base}/scoring`, label: "Scoring" },
           { href: `/events/${event.id}/schedule`, label: "Schedule" },
         ]
+      : []),
+    ...(roles.includes("REFEREE")
+      ? [{ href: `${base}/referee`, label: "Referee" }]
       : []),
   ];
 
@@ -124,7 +159,12 @@ function EventHeader() {
           <time dateTime={event.startsAt}>{formatEventTime(event)}</time>
           {" · "}
           {event.timezone}
+          {event.venue ? ` · ${event.venue}` : ""}
         </p>
+
+        {canManage && (
+          <EventEditButton event={event} onSaved={replaceDetail} />
+        )}
       </div>
 
       <nav

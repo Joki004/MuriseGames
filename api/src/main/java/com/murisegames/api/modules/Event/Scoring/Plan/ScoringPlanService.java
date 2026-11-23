@@ -31,7 +31,8 @@ import static com.murisegames.api.modules.Event.Scoring.Plan.ScoringPlanTypes.*;
 @RequiredArgsConstructor
 public class ScoringPlanService {
 
-    private static final String ADAPTER_REVISION = "policy-a-1";
+    // policy-a-2 (23 Nov 2026): balanced schedules are accepted; see expectedAppearances.
+    private static final String ADAPTER_REVISION = "policy-a-2";
 
     private static final String PRECISION =
             "Exact fractions for ranking; sum before rounding; "
@@ -244,10 +245,11 @@ public class ScoringPlanService {
             blockers.add("Choose an unpublished draft schedule.");
         }
 
-        if (!Set.of("manual", "round_robin").contains(schedule[1].toString())) {
+        String scheduleMode = schedule[1].toString();
+        boolean balancedSchedule = "balanced".equals(scheduleMode);
+        if (!Set.of("manual", "round_robin", "balanced").contains(scheduleMode)) {
             blockers.add(
-                    "Policy A currently accepts manual or round-robin schedules. "
-                            + "Balanced subsets need a separately approved policy."
+                    "Policy A accepts manual, round-robin or balanced schedules."
             );
         }
 
@@ -452,16 +454,30 @@ public class ScoringPlanService {
                 );
             }
 
-            int expectedAppearances = adapter.headToHead()
+            // Round robin / manual: every team meets every other team once.
+            // Balanced (agreed 23 Nov 2026): every team plays each head-to-head
+            // game once; with an odd team count exactly one team plays twice
+            // instead of anyone getting a bye. Scores stay rounds won ÷ rounds
+            // played, because each team's denominator is its own appearances.
+            boolean balancedHeadToHead = balancedSchedule && adapter.headToHead();
+            int expectedAppearances = adapter.headToHead() && !balancedSchedule
                     ? Math.max(0, teams.size() - 1)
                     : 1;
+            int teamsPlayingTwice = 0;
 
             List<Opportunity> opportunities = new ArrayList<>();
 
             for (TeamView team : teams) {
                 List<UUID> fixtureIds = appearances.get(team.id());
 
-                if (fixtureIds.size() != expectedAppearances) {
+                boolean allowedSecondMatch = balancedHeadToHead
+                        && teams.size() % 2 != 0
+                        && fixtureIds.size() == 2;
+                if (allowedSecondMatch) {
+                    teamsPlayingTwice++;
+                }
+
+                if (fixtureIds.size() != expectedAppearances && !allowedSecondMatch) {
                     blockers.add(
                             option.name() + " — " + team.name()
                                     + " has " + fixtureIds.size()
@@ -479,6 +495,13 @@ public class ScoringPlanService {
                         ),
                         List.copyOf(fixtureIds)
                 ));
+            }
+
+            if (balancedHeadToHead && teams.size() % 2 != 0 && teamsPlayingTwice != 1) {
+                blockers.add(
+                        option.name() + ": with an odd number of teams exactly one team "
+                                + "must play a second match (found " + teamsPlayingTwice + ")."
+                );
             }
 
             games.add(new GameView(

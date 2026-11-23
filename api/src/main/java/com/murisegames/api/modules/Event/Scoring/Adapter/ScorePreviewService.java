@@ -98,6 +98,20 @@ public class ScorePreviewService {
                 .toList();
     }
 
+    /**
+     * Scoring definitions for specific games, WITHOUT a permission check.
+     * Only call this after the caller has authorized the user (e.g. an assigned referee).
+     */
+    @Transactional(readOnly = true)
+    public List<GameOption> optionsForGames(UUID eventId, java.util.Collection<UUID> eventGameIds) {
+        return eventGameRepository
+                .findByEventIdOrderBySortOrderAscCreatedAtAsc(eventId)
+                .stream()
+                .filter(game -> eventGameIds.contains(game.getId()))
+                .map(this::describe)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public PreviewResponse preview(
             Jwt jwt,

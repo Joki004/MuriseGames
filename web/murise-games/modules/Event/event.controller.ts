@@ -5,6 +5,7 @@ import type {
   EventPage,
   EventResponse,
   EventDetailResponse,
+  EventUpdateInput,
 } from "./event.type";
 
 
@@ -38,6 +39,48 @@ function parseLocalDateTime(value: string): Date {
 }
 
 export const EventController = {
+  async update(
+    eventId: string,
+    input: EventUpdateInput,
+  ): Promise<EventDetailResponse> {
+    const name = input.name.trim();
+
+    if (!name || name.length > 160) {
+      throw new Error("Event name must contain between 1 and 160 characters.");
+    }
+
+    if (input.theme.length > 300 || input.venue.length > 300) {
+      throw new Error("Theme and venue must each be at most 300 characters.");
+    }
+
+    if (!["public", "private"].includes(input.visibility)) {
+      throw new Error("Choose public or private visibility.");
+    }
+
+    const startsAt = parseLocalDateTime(input.startsAtLocal);
+
+    try {
+      const response = await EventService.update(eventId, {
+        name,
+        theme: optionalText(input.theme),
+        startsAt: startsAt.toISOString(),
+        timezone: input.timezone,
+        venue: optionalText(input.venue),
+        visibility: input.visibility,
+      });
+
+      if (!response.data) {
+        throw new Error("The server returned an empty event payload.");
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not save the event details."),
+      );
+    }
+  },
+
   async create(input: EventCreateInput): Promise<EventResponse> {
     const name = input.name.trim();
 

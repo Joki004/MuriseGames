@@ -12,3 +12,4 @@ export * from "./Clue";
 export * from "./Title";
 export * from "./Guess";
 export * from "./Finale";
+export * from "./Referee";

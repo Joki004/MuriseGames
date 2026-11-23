@@ -5,6 +5,7 @@ import type {
   EventDetailResponse,
   EventPage,
   EventResponse,
+  EventUpdateRequest,
 } from "./event.type";
 
 export const EventService = {
@@ -26,6 +27,16 @@ export const EventService = {
   getDetail(eventId: string): Promise<CustomApiResponse<EventDetailResponse>> {
     return ApiService.get<EventDetailResponse>(
       `/api/events/${encodeURIComponent(eventId)}`,
+    );
+  },
+
+  update(
+    eventId: string,
+    payload: EventUpdateRequest,
+  ): Promise<CustomApiResponse<EventDetailResponse>> {
+    return ApiService.put<EventDetailResponse>(
+      `/api/events/${encodeURIComponent(eventId)}`,
+      payload,
     );
   },
 
