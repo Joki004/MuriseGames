@@ -111,6 +111,82 @@ class BalancedScheduleGeneratorTest {
         assertThat(distinctGamesInFirstWindow).isGreaterThanOrEqualTo(3);
     }
 
+    @Test
+    void completeRotationCoversEveryPairOnceIncludingOddTeamCounts() {
+        for (int teamCount = 3; teamCount <= 8; teamCount++) {
+            List<UUID> teams = new ArrayList<>();
+            for (int index = 0; index < teamCount; index++) {
+                teams.add(new UUID(0L, index + 1L));
+            }
+
+            int gameCount = teamCount % 2 == 0
+                    ? teamCount - 1
+                    : teamCount;
+
+            List<BalancedScheduleGenerator.GameInput> games = new ArrayList<>();
+            for (int index = 0; index < gameCount; index++) {
+                games.add(new BalancedScheduleGenerator.GameInput(
+                        new UUID(1L, index + 1L),
+                        "Game " + (index + 1),
+                        "head_to_head"
+                ));
+            }
+
+            var result = BalancedScheduleGenerator.generate(
+                    teams,
+                    games,
+                    Instant.parse("2026-11-28T18:00:00Z"),
+                    15,
+                    5,
+                    42L,
+                    2
+            );
+
+            // Check actual scheduled matches, independently of opponentMatrix.
+            Set<Set<UUID>> playedPairs = new HashSet<>();
+
+            for (var slot : result.slots()) {
+                if (slot.bye()) {
+                    assertThat(slot.teamIds()).hasSize(1);
+                    continue;
+                }
+
+                assertThat(slot.teamIds()).hasSize(2);
+                assertThat(playedPairs.add(Set.copyOf(slot.teamIds())))
+                        .as("Repeated scheduled pair with %d teams", teamCount)
+                        .isTrue();
+            }
+
+            assertThat(playedPairs)
+                    .hasSize(teamCount * (teamCount - 1) / 2);
+
+            long expectedByes = teamCount % 2 == 0 ? 0L : teamCount;
+
+            assertThat(result.slots().stream()
+                    .filter(BalancedScheduleGenerator.PlannedSlot::bye)
+                    .count())
+                    .isEqualTo(expectedByes);
+
+            // Every team gets exactly one assignment per game:
+            // either a real match or its explicit bye.
+            for (var game : games) {
+                for (UUID teamId : teams) {
+                    long appearances = result.slots().stream()
+                            .filter(slot ->
+                                    slot.eventGameId().equals(game.eventGameId()))
+                            .filter(slot -> slot.teamIds().contains(teamId))
+                            .count();
+
+                    assertThat(appearances)
+                            .as("Team %s in game %s", teamId, game.name())
+                            .isEqualTo(1L);
+                }
+            }
+
+            assertNoRematches(teams, result);
+        }
+    }
+
     private static void assertNoRematches(List<UUID> teams, BalancedScheduleGenerator.GenerationResult result) {
         for (UUID a : teams) {
             for (UUID b : teams) {
@@ -122,4 +198,5 @@ class BalancedScheduleGeneratorTest {
             }
         }
     }
+
 }

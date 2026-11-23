@@ -191,7 +191,8 @@ public final class BalancedScheduleGenerator {
         if (soloGames.isEmpty() && h2hGames.isEmpty()) {
             return startCursor;
         }
-
+        Map<UUID, Map<UUID, UUID>> opponentsByGame =
+                planOpponents(h2hGames, teamIds, rng);
         Map<UUID, Set<UUID>> remainingByGame = new LinkedHashMap<>();
         Map<UUID, Integer> roundCounterByGame = new LinkedHashMap<>();
         for (GameInput g : soloGames) {
@@ -238,8 +239,18 @@ public final class BalancedScheduleGenerator {
             for (GameInput game : orderedH2h) {
                 if (stationsUsed >= stationCap) break;
                 if (scheduleOnePair(
-                        game, remainingByGame, roundCounterByGame, busyInWindow,
-                        matrix, consecutiveRest, totalRest, rng, cursor, end, windowSlots
+                        game,
+                        opponentsByGame,
+                        remainingByGame,
+                        roundCounterByGame,
+                        busyInWindow,
+                        matrix,
+                        consecutiveRest,
+                        totalRest,
+                        rng,
+                        cursor,
+                        end,
+                        windowSlots
                 )) {
                     stationsUsed++;
                 }
@@ -253,8 +264,18 @@ public final class BalancedScheduleGenerator {
                 for (GameInput game : orderedH2h) {
                     if (stationsUsed >= stationCap) break;
                     if (scheduleOnePair(
-                            game, remainingByGame, roundCounterByGame, busyInWindow,
-                            matrix, consecutiveRest, totalRest, rng, cursor, end, windowSlots
+                            game,
+                            opponentsByGame,
+                            remainingByGame,
+                            roundCounterByGame,
+                            busyInWindow,
+                            matrix,
+                            consecutiveRest,
+                            totalRest,
+                            rng,
+                            cursor,
+                            end,
+                            windowSlots
                     )) {
                         stationsUsed++;
                         addedExtra = true;
@@ -317,6 +338,7 @@ public final class BalancedScheduleGenerator {
 
     private static boolean scheduleOnePair(
             GameInput game,
+            Map<UUID, Map<UUID, UUID>> opponentsByGame,
             Map<UUID, Set<UUID>> remainingByGame,
             Map<UUID, Integer> roundCounterByGame,
             Set<UUID> busyInWindow,
@@ -330,29 +352,58 @@ public final class BalancedScheduleGenerator {
     ) {
         UUID gameId = game.eventGameId();
         Set<UUID> remaining = remainingByGame.get(gameId);
-        List<UUID> candidates = new ArrayList<>(
-                remaining.stream().filter(id -> !busyInWindow.contains(id)).toList()
-        );
-        if (candidates.size() < 2) {
+        Map<UUID, UUID> opponents = opponentsByGame.get(gameId);
+
+        List<UUID> candidates = remaining.stream()
+                .filter(teamId -> {
+                    UUID opponent = opponents.get(teamId);
+
+                    return opponent != null
+                            && remaining.contains(opponent)
+                            && !busyInWindow.contains(teamId)
+                            && !busyInWindow.contains(opponent);
+                })
+                .toList();
+
+        if (candidates.isEmpty()) {
             return false;
         }
 
-        UUID first = pickPriorityTeam(candidates, consecutiveRest, totalRest, rng);
-        candidates.remove(first);
-        UUID opponent = pickBestOpponent(first, candidates, matrix, consecutiveRest, totalRest, rng);
+        // Preserve rest priority, but only among complete available pairs.
+        UUID first = pickPriorityTeam(
+                candidates,
+                consecutiveRest,
+                totalRest,
+                rng
+        );
+
+        UUID opponent = opponents.get(first);
 
         busyInWindow.add(first);
         busyInWindow.add(opponent);
+
         remaining.remove(first);
         remaining.remove(opponent);
 
+        // Count only matches actually placed into the schedule.
         matrix.get(first).merge(opponent, 1, Integer::sum);
         matrix.get(opponent).merge(first, 1, Integer::sum);
 
-        int round = roundCounterByGame.merge(gameId, 1, Integer::sum) - 1;
+        int round = roundCounterByGame.merge(
+                gameId,
+                1,
+                Integer::sum
+        ) - 1;
+
         windowSlots.add(new PlannedSlot(
-                gameId, round, cursor, end, List.of(first, opponent), false
+                gameId,
+                round,
+                cursor,
+                end,
+                List.of(first, opponent),
+                false
         ));
+
         return true;
     }
 
@@ -387,5 +438,50 @@ public final class BalancedScheduleGenerator {
                         .thenComparingInt(cand -> -consecutiveRest.getOrDefault(cand, 0))
                         .thenComparingInt(cand -> -totalRest.getOrDefault(cand, 0)))
                 .orElseThrow();
+    }
+
+    private static Map<UUID, Map<UUID, UUID>> planOpponents(
+            List<GameInput> headToHeadGames,
+            List<UUID> teamIds,
+            Random rng
+    ) {
+        if (headToHeadGames.isEmpty()) {
+            return Map.of();
+        }
+
+        List<UUID> rotation = new ArrayList<>(teamIds);
+        Collections.shuffle(rotation, rng);
+
+        // A null position represents a bye.
+        if (rotation.size() % 2 != 0) {
+            rotation.add(null);
+        }
+
+        Map<UUID, Map<UUID, UUID>> opponentsByGame = new LinkedHashMap<>();
+
+        for (GameInput game : headToHeadGames) {
+            Map<UUID, UUID> opponents = new LinkedHashMap<>();
+
+            for (int index = 0; index < rotation.size() / 2; index++) {
+                UUID first = rotation.get(index);
+                UUID second = rotation.get(rotation.size() - 1 - index);
+
+                if (first != null) {
+                    opponents.put(first, second);
+                }
+                if (second != null) {
+                    opponents.put(second, first);
+                }
+            }
+
+            // A null opponent deliberately identifies this game's bye team.
+            // Do not use Map.copyOf here: it rejects null values.
+            opponentsByGame.put(game.eventGameId(), opponents);
+
+            // Keep the first position fixed and rotate all other positions.
+            rotation.add(1, rotation.removeLast());
+        }
+
+        return opponentsByGame;
     }
 }
