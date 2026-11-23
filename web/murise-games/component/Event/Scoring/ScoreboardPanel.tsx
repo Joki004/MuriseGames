@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TeamResultsModeControl } from "./TeamResultsModeControl";
 import {
   ParticipantController,
   type TeamOption,
@@ -180,6 +181,8 @@ export function ScoreboardPanel({ eventId }: ScoreboardPanelProps) {
           </button>
         </div>
       </div>
+
+      {isOrganizer && <TeamResultsModeControl eventId={eventId} />}
 
       {error && (
         <p role="alert" className="mt-2 text-xs text-rose-300">

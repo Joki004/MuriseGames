@@ -246,6 +246,15 @@ public class ScoringService {
         return getScoreboard(jwt, eventId);
     }
 
+    /**
+     * Live standings WITHOUT a permission check. Only call after the caller has
+     * decided this viewer may see the full scoreboard (e.g. team results mode).
+     */
+    @Transactional(readOnly = true)
+    public List<ScoreboardRowResponse> liveStandingsUnchecked(UUID eventId) {
+        return computeLiveStandings(eventId);
+    }
+
     private List<ScoreboardRowResponse> computeLiveStandings(UUID eventId) {
         List<Team> activeTeams =
                 teamRepository.findByEventIdAndActiveTrueOrderBySortOrderAscNameAsc(eventId);

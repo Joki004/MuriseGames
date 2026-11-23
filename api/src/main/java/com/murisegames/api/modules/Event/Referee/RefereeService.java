@@ -142,9 +142,19 @@ public class RefereeService {
         }
 
         var games = previewService.optionsForGames(eventId, gameIds);
-        List<DeskFixture> fixtures = published
-                ? loadFixtures(eventId, gameIds, myTeamId)
-                : List.of();
+        List<DeskFixture> fixtures = List.of();
+        if (published) {
+            List<FixtureInfo> all = loadPublishedFixtures(eventId);
+            fixtures = all.stream()
+                    .filter(f -> gameIds.contains(f.eventGameId()))
+                    .map(f -> new DeskFixture(
+                            f.fixtureId(), f.eventGameId(), f.gameName(), f.roundNumber(),
+                            f.status(), f.startAt(), f.endAt(), f.resourceName(), f.teams(),
+                            isOwnTeamMatch(myTeamId, f.teamIds()),
+                            teamBusy(myTeamId, f, all)
+                    ))
+                    .toList();
+        }
 
         return new RefereeDeskResponse(games, fixtures, published);
     }
@@ -253,10 +263,88 @@ public class RefereeService {
                 .map(r -> new AssignmentView(uuid(r[0]), uuid(r[1]), uuid(r[2]), toInstant(r[3])))
                 .toList();
 
-        return new RefereeBoardResponse(referees, games, assignments);
+        return new RefereeBoardResponse(referees, games, assignments,
+                buildCoverage(eventId, referees, games, assignments));
     }
 
-    private List<DeskFixture> loadFixtures(UUID eventId, List<UUID> gameIds, UUID myTeamId) {
+    /**
+     * For every published match of a refereeable game: the assigned referees whose
+     * own team isn't in it, flagged busy when their team plays at the same time.
+     */
+    private List<CoverageRow> buildCoverage(
+            UUID eventId,
+            List<RefereeOption> referees,
+            List<GameView> games,
+            List<AssignmentView> assignments
+    ) {
+        if (!hasPublishedSchedule(eventId)) {
+            return List.of();
+        }
+        Set<UUID> refereeableGames = new HashSet<>();
+        games.forEach(g -> refereeableGames.add(g.eventGameId()));
+
+        List<FixtureInfo> all = loadPublishedFixtures(eventId);
+        List<CoverageRow> rows = new ArrayList<>();
+        for (FixtureInfo f : all) {
+            if (!refereeableGames.contains(f.eventGameId())) continue;
+            if (f.teams().stream().anyMatch(t -> "bye".equals(t.side()))) continue;
+
+            List<CoverageReferee> eligible = new ArrayList<>();
+            for (RefereeOption r : referees) {
+                boolean assigned = assignments.stream().anyMatch(a ->
+                        a.membershipId().equals(r.membershipId())
+                                && a.eventGameId().equals(f.eventGameId()));
+                if (!assigned || isOwnTeamMatch(r.teamId(), f.teamIds())) continue;
+                eligible.add(new CoverageReferee(
+                        r.membershipId(), r.displayName(), teamBusy(r.teamId(), f, all)));
+            }
+            rows.add(new CoverageRow(
+                    f.fixtureId(), f.gameName(), f.roundNumber(), f.startAt(), f.endAt(),
+                    f.teams(), List.copyOf(eligible)));
+        }
+        return rows;
+    }
+
+    /** One published fixture with its teams. */
+    record FixtureInfo(
+            UUID fixtureId,
+            UUID eventGameId,
+            String gameName,
+            int roundNumber,
+            String status,
+            Instant startAt,
+            Instant endAt,
+            String resourceName,
+            List<DeskFixtureTeam> teams
+    ) {
+        /** Teams actually playing (byes excluded). */
+        List<UUID> teamIds() {
+            return teams.stream()
+                    .filter(t -> !"bye".equals(t.side()))
+                    .map(DeskFixtureTeam::teamId)
+                    .toList();
+        }
+    }
+
+    /**
+     * True when {@code teamId} plays another fixture whose time overlaps {@code match}.
+     * Byes don't count as playing. A null team (neutral referee) is never busy.
+     */
+    static boolean teamBusy(UUID teamId, FixtureInfo match, List<FixtureInfo> all) {
+        if (teamId == null) return false;
+        for (FixtureInfo other : all) {
+            if (other.fixtureId().equals(match.fixtureId())) continue;
+            if ("voided".equals(other.status())) continue;
+            if (!other.teamIds().contains(teamId)) continue;
+            boolean overlaps = other.startAt().isBefore(match.endAt())
+                    && match.startAt().isBefore(other.endAt());
+            if (overlaps) return true;
+        }
+        return false;
+    }
+
+    /** Every fixture of the published schedule, all games, with its teams. */
+    private List<FixtureInfo> loadPublishedFixtures(UUID eventId) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
                 SELECT f.id, f.event_game_id, gd.name, f.round_number, f.status,
@@ -275,57 +363,28 @@ public class RefereeService {
                 JOIN murise.fixture_teams ft ON ft.fixture_id = f.id
                 JOIN murise.teams t ON t.id = ft.team_id
                 WHERE f.event_id = :eventId
-                  AND f.event_game_id IN (:gameIds)
                 ORDER BY s.start_at, gd.name, f.round_number, t.sort_order, t.name
                 """)
                 .setParameter("eventId", eventId)
-                .setParameter("gameIds", gameIds)
                 .getResultList();
 
-        Map<UUID, DeskFixtureBuilder> byFixture = new LinkedHashMap<>();
+        Map<UUID, Object[]> heads = new LinkedHashMap<>();
+        Map<UUID, List<DeskFixtureTeam>> teams = new HashMap<>();
         for (Object[] r : rows) {
             UUID fixtureId = uuid(r[0]);
-            DeskFixtureBuilder b = byFixture.computeIfAbsent(fixtureId, id -> new DeskFixtureBuilder(
-                    id, uuid(r[1]), r[2].toString(), ((Number) r[3]).intValue(), r[4].toString(),
-                    toInstant(r[5]), toInstant(r[6]), r[7] != null ? r[7].toString() : null
-            ));
-            b.teams.add(new DeskFixtureTeam(uuid(r[8]), r[9].toString(), r[10].toString()));
+            heads.putIfAbsent(fixtureId, r);
+            teams.computeIfAbsent(fixtureId, k -> new ArrayList<>())
+                    .add(new DeskFixtureTeam(uuid(r[8]), r[9].toString(), r[10].toString()));
         }
 
-        return byFixture.values().stream()
-                .map(b -> {
-                    List<UUID> teamIds = b.teams.stream().map(DeskFixtureTeam::teamId).toList();
-                    return new DeskFixture(
-                            b.fixtureId, b.eventGameId, b.gameName, b.roundNumber, b.status,
-                            b.startAt, b.endAt, b.resourceName, List.copyOf(b.teams),
-                            isOwnTeamMatch(myTeamId, teamIds)
-                    );
-                })
-                .toList();
-    }
-
-    private static final class DeskFixtureBuilder {
-        final UUID fixtureId;
-        final UUID eventGameId;
-        final String gameName;
-        final int roundNumber;
-        final String status;
-        final Instant startAt;
-        final Instant endAt;
-        final String resourceName;
-        final List<DeskFixtureTeam> teams = new ArrayList<>();
-
-        DeskFixtureBuilder(UUID fixtureId, UUID eventGameId, String gameName, int roundNumber,
-                           String status, Instant startAt, Instant endAt, String resourceName) {
-            this.fixtureId = fixtureId;
-            this.eventGameId = eventGameId;
-            this.gameName = gameName;
-            this.roundNumber = roundNumber;
-            this.status = status;
-            this.startAt = startAt;
-            this.endAt = endAt;
-            this.resourceName = resourceName;
-        }
+        List<FixtureInfo> fixtures = new ArrayList<>();
+        heads.forEach((fixtureId, r) -> fixtures.add(new FixtureInfo(
+                fixtureId, uuid(r[1]), r[2].toString(), ((Number) r[3]).intValue(),
+                r[4].toString(), toInstant(r[5]), toInstant(r[6]),
+                r[7] != null ? r[7].toString() : null,
+                List.copyOf(teams.get(fixtureId))
+        )));
+        return fixtures;
     }
 
     private UUID membershipIdOf(UUID eventId, UUID userId) {

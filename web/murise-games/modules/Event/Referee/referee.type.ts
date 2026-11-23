@@ -20,10 +20,30 @@ export interface RefereeAssignmentView {
   createdAt: string;
 }
 
+export interface CoverageReferee {
+  membershipId: string;
+  displayName: string;
+  /** Their team plays another match at the same time. */
+  busy: boolean;
+}
+
+export interface CoverageRow {
+  fixtureId: string;
+  gameName: string;
+  roundNumber: number;
+  startAt: string;
+  endAt: string;
+  teams: DeskFixtureTeam[];
+  /** Empty = no assigned referee can record it; only organizers can. */
+  referees: CoverageReferee[];
+}
+
 export interface RefereeBoardResponse {
   referees: RefereeOption[];
   games: RefereeGameView[];
   assignments: RefereeAssignmentView[];
+  /** Empty until the schedule is published. */
+  coverage: CoverageRow[];
 }
 
 export interface AssignRefereeRequest {
@@ -49,6 +69,8 @@ export interface DeskFixture {
   teams: DeskFixtureTeam[];
   /** The referee's own team plays: someone else must record it. */
   ownTeam: boolean;
+  /** The referee's team plays another match at the same time (warning only). */
+  teamBusy: boolean;
 }
 
 export interface RefereeDeskResponse {

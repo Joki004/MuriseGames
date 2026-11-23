@@ -159,6 +159,65 @@ export function RefereeAssignmentPanel({ eventId }: RefereeAssignmentPanelProps)
           ))}
         </ul>
       )}
+
+      {board && board.coverage.length > 0 && (
+        <section className="space-y-2 border-t border-border pt-4">
+          <h3 className="text-sm font-semibold">Coverage</h3>
+          <p className="text-xs text-muted">
+            Who can record each match. &ldquo;Playing then&rdquo; means their
+            team has another match at the same time: they can still record it,
+            but may not be able to watch.
+          </p>
+          <ul className="space-y-1.5">
+            {board.coverage.map((row) => {
+              const free = row.referees.filter((r) => !r.busy);
+              return (
+                <li
+                  key={row.fixtureId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--ui-radius-control)] border border-border px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {formatTime(row.startAt)} · {row.gameName} · Round{" "}
+                      {row.roundNumber}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {row.teams.map((t) => t.teamName).join(" vs ")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {row.referees.length === 0 ? (
+                      <Badge tone="danger">No referee: host records</Badge>
+                    ) : (
+                      <>
+                        {free.length === 0 && (
+                          <Badge tone="warning">All referees playing then</Badge>
+                        )}
+                        {row.referees.map((r) => (
+                          <Badge
+                            key={r.membershipId}
+                            tone={r.busy ? "warning" : "success"}
+                          >
+                            {r.displayName}
+                            {r.busy ? " (playing then)" : ""}
+                          </Badge>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </Card>
   );
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

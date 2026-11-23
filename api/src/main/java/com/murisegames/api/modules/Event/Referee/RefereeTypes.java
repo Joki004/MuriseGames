@@ -34,10 +34,27 @@ public final class RefereeTypes {
     ) {
     }
 
+    /** A referee who could record this match; busy = their team plays at the same time. */
+    public record CoverageReferee(UUID membershipId, String displayName, boolean busy) {
+    }
+
+    /** Who can record each match. An empty referee list means only organizers can. */
+    public record CoverageRow(
+            UUID fixtureId,
+            String gameName,
+            int roundNumber,
+            Instant startAt,
+            Instant endAt,
+            List<DeskFixtureTeam> teams,
+            List<CoverageReferee> referees
+    ) {
+    }
+
     public record RefereeBoardResponse(
             List<RefereeOption> referees,
             List<GameView> games,
-            List<AssignmentView> assignments
+            List<AssignmentView> assignments,
+            List<CoverageRow> coverage
     ) {
     }
 
@@ -63,7 +80,9 @@ public final class RefereeTypes {
             String resourceName,
             List<DeskFixtureTeam> teams,
             /** The referee's own team plays in this match: they may not record it. */
-            boolean ownTeam
+            boolean ownTeam,
+            /** The referee's team plays another match at the same time (warning only). */
+            boolean teamBusy
     ) {
     }
 
