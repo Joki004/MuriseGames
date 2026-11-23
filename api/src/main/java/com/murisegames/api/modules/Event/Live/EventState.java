@@ -25,6 +25,9 @@ public class EventState {
     @Column(name = "current_event_game_id")
     private UUID currentEventGameId;
 
+    @Column(name = "current_window_start_at")
+    private Instant currentWindowStartAt;
+
     @Column(nullable = false, columnDefinition = "text")
     private String phase;
 

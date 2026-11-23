@@ -4,10 +4,21 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
 import { PageShell } from "@/component/Layout/PageShell";
-import { Alert, Badge, Button, Card, CardHeader, CardTitle } from "@/component/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+} from "@/component/ui";
 import { extractApiErrorMessage } from "@/modules/Api/api.service";
-import { EventGameController, type EventGameResponse } from "@/modules/Event/EventGame";
+import {
+  EventGameController,
+  type EventGameResponse,
+} from "@/modules/Event/EventGame";
 import { EventLiveController, useEventSnapshot } from "@/modules/Event/Live";
 import { ParticipantController } from "@/modules/Event/Participant";
 import { TeamController, type TeamResponse } from "@/modules/Event/Team";
@@ -22,14 +33,16 @@ function formatMs(ms: number) {
 
 export function PlayerScreenView() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { snapshot, clockOffsetMs, error, applySnapshot } = useEventSnapshot(eventId);
+  const { snapshot, clockOffsetMs, error, applySnapshot } =
+    useEventSnapshot(eventId);
 
   const [myTeam, setMyTeam] = useState<TeamResponse | null>(null);
   const [games, setGames] = useState<EventGameResponse[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-useEffect(() => {
+
+  useEffect(() => {
     void Promise.all([
       UserController.getProfile(),
       ParticipantController.list(eventId),
@@ -56,23 +69,48 @@ useEffect(() => {
       return snapshot.pausedRemainingMs;
     }
     if (snapshot.deadlineAt) {
-      return Math.max(0, Date.parse(snapshot.deadlineAt) - (nowMs + clockOffsetMs));
+      return Math.max(
+        0,
+        Date.parse(snapshot.deadlineAt) - (nowMs + clockOffsetMs),
+      );
     }
     return null;
   })();
 
-  const activeGame = games.find((g) => g.id === snapshot?.currentEventGameId);
-  const isReady = myTeam ? (snapshot?.readyTeamIds ?? []).includes(myTeam.id) : false;
+  const myFixtures = myTeam
+    ? (snapshot?.activeFixtures ?? []).filter((f) =>
+        f.teams.some((t) => t.teamId === myTeam.id),
+      )
+    : [];
+
+  const myPlayingFixture =
+    myFixtures.find((f) => !f.teams.some((t) => t.side === "bye")) ?? null;
+
+  const activeGame = myPlayingFixture
+    ? games.find((g) => g.id === myPlayingFixture.eventGameId)
+    : snapshot?.currentWindowStartAt
+      ? undefined
+      : games.find((g) => g.id === snapshot?.currentEventGameId);
+
+  const isReady = myTeam
+    ? (snapshot?.readyTeamIds ?? []).includes(myTeam.id)
+    : false;
 
   async function toggleReady() {
     if (!myTeam) return;
     setBusy(true);
     setActionError(null);
     try {
-      const updated = await EventLiveController.setReady(eventId, myTeam.id, !isReady);
+      const updated = await EventLiveController.setReady(
+        eventId,
+        myTeam.id,
+        !isReady,
+      );
       applySnapshot(updated);
     } catch (err: unknown) {
-      setActionError(extractApiErrorMessage(err, "Could not update team readiness."));
+      setActionError(
+        extractApiErrorMessage(err, "Could not update team readiness."),
+      );
     } finally {
       setBusy(false);
     }
@@ -84,17 +122,22 @@ useEffect(() => {
         title={myTeam ? myTeam.name : "Player screen"}
         description="Live game status and team actions."
         action={
-          <Link href={`/events/${eventId}`} className="ui-button ui-button--secondary">
+          <Link
+            href={`/events/${eventId}`}
+            className="ui-button ui-button--secondary"
+          >
             Event home
           </Link>
         }
       >
-        {(error || actionError) && <Alert tone="error">{actionError ?? error}</Alert>}
+        {(error || actionError) && (
+          <Alert tone="error">{actionError ?? error}</Alert>
+        )}
 
         <Card className="space-y-5 text-center">
           <div className="flex justify-center gap-2">
             <Badge tone={snapshot?.paused ? "warning" : "accent"}>
-              {snapshot?.paused ? "Paused" : snapshot?.phase ?? "lobby"}
+              {snapshot?.paused ? "Paused" : (snapshot?.phase ?? "lobby")}
             </Badge>
             {activeGame && <Badge>{activeGame.name}</Badge>}
           </div>
@@ -102,6 +145,51 @@ useEffect(() => {
           <p className="font-mono text-6xl font-bold tracking-tight">
             {remainingMs != null ? formatMs(remainingMs) : "--:--"}
           </p>
+
+          {myTeam && myFixtures.length > 0 && (
+            <div className="mx-auto max-w-md space-y-2 rounded-[var(--ui-radius-control)] border border-border bg-background/60 p-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Your Matchup
+              </p>
+              {myFixtures.map((f) => {
+                const isBye = f.teams.some((t) => t.side === "bye");
+                const opponents = f.teams.filter(
+                  (t) => t.teamId !== myTeam.id && t.side !== "bye",
+                );
+                return (
+                  <div key={f.fixtureId} className="space-y-0.5">
+                    <p className="text-xs font-semibold text-accent">
+                      {isBye ? "Resting / Bye" : f.gameName}
+                    </p>
+                    <p className="text-base font-bold">
+                      {isBye
+                        ? "Bye this round (rest up — you're next!)"
+                        : opponents.length > 0
+                          ? `vs ${opponents.map((o) => o.teamName).join(" & ")}`
+                          : "Solo / All-team station"}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Round {f.roundNumber}
+                      {f.resourceName ? ` · ${f.resourceName}` : ""}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {myTeam &&
+            myFixtures.length === 0 &&
+            (snapshot?.activeFixtures?.length ?? 0) > 0 && (
+              <div className="mx-auto max-w-md rounded-[var(--ui-radius-control)] border border-border bg-background/60 p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Short Break
+                </p>
+                <p className="mt-1 text-base font-bold">
+                  You&apos;re resting this round — up next!
+                </p>
+              </div>
+            )}
 
           {activeGame?.code && (
             <div>
@@ -123,7 +211,8 @@ useEffect(() => {
           {myTeam ? (
             <div className="flex flex-col items-center gap-3">
               <p className="text-sm text-muted">
-                Status: <strong>{isReady ? "Ready for host" : "Not ready yet"}</strong>
+                Status:{" "}
+                <strong>{isReady ? "Ready for host" : "Not ready yet"}</strong>
               </p>
               <Button
                 className="w-full py-4 text-lg"
@@ -140,10 +229,16 @@ useEffect(() => {
             </div>
           ) : (
             <p className="text-sm text-muted">
-              You are not assigned to a team yet. Ask the organizer to place you on a team.
+              You are not assigned to a team yet. Ask the organizer to place you
+              on a team.
             </p>
           )}
         </Card>
+
+        <SecretSceneGuessPanel
+          eventId={eventId}
+          snapshotVersion={snapshot?.version}
+        />
       </PageShell>
     </RequireAccount>
   );

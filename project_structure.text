@@ -82,6 +82,14 @@
                       - ClueBoardResponse$TeamClues.class
                       - ClueBoardResponse.class
                       - ClueController.class
+                      - ClueReleaseController.class
+                      - ClueReleaseService$StateRow.class
+                      - ClueReleaseService.class
+                      - ClueReleaseTypes$PublicClue.class
+                      - ClueReleaseTypes$ReleasedCluesResponse.class
+                      - ClueReleaseTypes$ReleaseRecord.class
+                      - ClueReleaseTypes$StageCommandRequest.class
+                      - ClueReleaseTypes.class
                       - ClueService.class
                       - ClueSetSaveRequest$Item.class
                       - ClueSetSaveRequest.class
@@ -108,6 +116,15 @@
                     - EventService.class
                     - EventStatusController$EventStatusUpdateRequest.class
                     - EventStatusController.class
+                    - Guess
+                      - GuessController.class
+                      - GuessService$StateSnapshot.class
+                      - GuessService.class
+                      - GuessTypes$CaptainGuessBoardResponse.class
+                      - GuessTypes$GuessReceipt.class
+                      - GuessTypes$OpposingTarget.class
+                      - GuessTypes$SubmitGuessRequest.class
+                      - GuessTypes.class
                     - Invite
                       - dto
                         - InviteCreateRequest.class
@@ -134,6 +151,8 @@
                       - EventLiveController.class
                       - EventLiveService$EventMeta.class
                       - EventLiveService.class
+                      - EventSnapshotResponse$ActiveFixtureTeamView.class
+                      - EventSnapshotResponse$ActiveFixtureView.class
                       - EventSnapshotResponse.class
                       - EventState.class
                       - EventStateRepository.class
@@ -151,12 +170,30 @@
                       - EventRoleService.class
                     - Participant
                       - dto
+                        - ParticipantCaptainRequest.class
                         - ParticipantTeamAssignRequest.class
                       - EventParticipant.class
                       - EventParticipantController.class
                       - EventParticipantRepository.class
                       - EventParticipantResponse.class
                       - EventParticipantService.class
+                    - Schedule
+                      - BalancedScheduleGenerator$GameInput.class
+                      - BalancedScheduleGenerator$GenerationResult.class
+                      - BalancedScheduleGenerator$PlannedSlot.class
+                      - BalancedScheduleGenerator.class
+                      - ScheduleController.class
+                      - ScheduleService.class
+                      - ScheduleTypes$AddFixtureRequest.class
+                      - ScheduleTypes$CreateManualDraftRequest.class
+                      - ScheduleTypes$CreateResourceRequest.class
+                      - ScheduleTypes$FixtureTeamView.class
+                      - ScheduleTypes$FixtureView.class
+                      - ScheduleTypes$GenerateBalancedDraftRequest.class
+                      - ScheduleTypes$ResourceView.class
+                      - ScheduleTypes$ScheduleDetail.class
+                      - ScheduleTypes$ScheduleSummary.class
+                      - ScheduleTypes.class
                     - Scoring
                       - Adapter
                         - ExactScore.class
@@ -206,6 +243,18 @@
                       - ScoringController.class
                       - ScoringService$EventScoreboardState.class
                       - ScoringService.class
+                      - Settlement
+                        - OfficialResultController.class
+                        - OfficialResultService$GameResultRow.class
+                        - OfficialResultService$PlannedFixture.class
+                        - OfficialResultService.class
+                        - OfficialResultTypes$CancelFixtureRequest.class
+                        - OfficialResultTypes$FixtureSettlementResponse.class
+                        - OfficialResultTypes$RankedTeam.class
+                        - OfficialResultTypes$RankingStatusResponse.class
+                        - OfficialResultTypes$RecordFixtureResultRequest.class
+                        - OfficialResultTypes$TeamSettlement.class
+                        - OfficialResultTypes.class
                     - Team
                       - dto
                         - TeamSaveRequest.class
@@ -285,13 +334,21 @@
                   - JwtValidationConfigTest.class
                 - modules
                   - Event
+                    - Clue
+                      - ClueReleaseServiceTest.class
+                    - Guess
+                      - GuessServiceTest.class
                     - Live
                       - EventLiveServiceTest.class
                     - Membership
                       - EventRoleServiceTest.class
+                    - Schedule
+                      - BalancedScheduleGeneratorTest.class
                     - Scoring
                       - Adapter
                         - ExactScoreTest.class
+                      - Settlement
+                        - OfficialResultServiceTest.class
                     - Title
                       - TitleNormalizerTest.class
                   - Picture
@@ -317,11 +374,21 @@
             - index.html
           - com.murisegames.api.config.JwtValidationConfigTest
             - index.html
+          - com.murisegames.api.modules.Event.Clue.ClueReleaseServiceTest
+            - index.html
+          - com.murisegames.api.modules.Event.Guess.GuessServiceTest
+            - index.html
           - com.murisegames.api.modules.Event.Live.EventLiveServiceTest
             - index.html
           - com.murisegames.api.modules.Event.Membership.EventRoleServiceTest
             - index.html
+          - com.murisegames.api.modules.Event.Schedule.BalancedScheduleGeneratorTest
+            - fourTeamsAcrossThreeHeadToHeadGamesFaceEveryOpponentOnce().html
+            - fourTeamsNeverRematchRegardlessOfSeed().html
+            - index.html
           - com.murisegames.api.modules.Event.Scoring.Adapter.ExactScoreTest
+            - index.html
+          - com.murisegames.api.modules.Event.Scoring.Settlement.OfficialResultServiceTest
             - index.html
           - com.murisegames.api.modules.Event.Title.TitleNormalizerTest
             - index.html
@@ -346,6 +413,9 @@
             - V11__add_scene_clues.sql
             - V12__add_scene_titles.sql
             - V13__add_scoring_plans.sql
+            - V14__add_guessing_state_and_clue_releases.sql
+            - V15__add_guesses.sql
+            - V16__add_live_window_start.sql
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
             - V3__add_murise_app_rls_policies.sql
@@ -366,9 +436,13 @@
           - results-generic.bin
         - TEST-com.murisegames.api.ApiApplicationTests.xml
         - TEST-com.murisegames.api.config.JwtValidationConfigTest.xml
+        - TEST-com.murisegames.api.modules.Event.Clue.ClueReleaseServiceTest.xml
+        - TEST-com.murisegames.api.modules.Event.Guess.GuessServiceTest.xml
         - TEST-com.murisegames.api.modules.Event.Live.EventLiveServiceTest.xml
         - TEST-com.murisegames.api.modules.Event.Membership.EventRoleServiceTest.xml
+        - TEST-com.murisegames.api.modules.Event.Schedule.BalancedScheduleGeneratorTest.xml
         - TEST-com.murisegames.api.modules.Event.Scoring.Adapter.ExactScoreTest.xml
+        - TEST-com.murisegames.api.modules.Event.Scoring.Settlement.OfficialResultServiceTest.xml
         - TEST-com.murisegames.api.modules.Event.Title.TitleNormalizerTest.xml
         - TEST-com.murisegames.api.modules.Picture.EventMediaServiceTest.xml
         - TEST-com.murisegames.api.modules.User.UserServiceTest.xml
@@ -377,13 +451,46 @@
         - compileTransaction
           - backup-dir
           - stash-dir
+            - ClueController.class.uniqueId13
+            - ClueReleaseController.class.uniqueId3
+            - ClueReleaseService$StateRow.class.uniqueId0
+            - ClueReleaseService.class.uniqueId20
+            - ClueService.class.uniqueId31
+            - EventParticipantController.class.uniqueId19
+            - EventParticipantService.class.uniqueId18
+            - GuessController.class.uniqueId12
+            - GuessService$StateSnapshot.class.uniqueId25
+            - GuessService.class.uniqueId2
+            - JoinRequestController.class.uniqueId26
+            - JoinRequestService.class.uniqueId14
+            - PictureCleanup.class.uniqueId22
+            - PictureController$EmojiRequest.class.uniqueId21
+            - PictureController.class.uniqueId7
+            - PictureService.class.uniqueId32
+            - PictureTransactions$1.class.uniqueId10
+            - PictureTransactions$Selection.class.uniqueId17
+            - PictureTransactions$Target.class.uniqueId27
+            - PictureTransactions.class.uniqueId11
+            - ScheduleController.class.uniqueId16
+            - ScheduleService.class.uniqueId9
+            - ScoringController.class.uniqueId23
+            - ScoringPlanController.class.uniqueId4
+            - ScoringPlanService$Assignment.class.uniqueId5
+            - ScoringPlanService$SourceFixture.class.uniqueId28
+            - ScoringPlanService.class.uniqueId1
+            - ScoringService$EventScoreboardState.class.uniqueId33
+            - ScoringService.class.uniqueId15
+            - TeamController.class.uniqueId8
+            - TeamRepository.class.uniqueId6
+            - TeamService.class.uniqueId24
+            - TitleController.class.uniqueId30
+            - TitleService.class.uniqueId29
         - previous-compilation-data.bin
       - compileTestJava
         - compileTransaction
           - backup-dir
           - stash-dir
-            - ApiApplicationTests.class.uniqueId0
-            - EventLiveServiceTest.class.uniqueId1
+            - BalancedScheduleGeneratorTest.class.uniqueId0
         - previous-compilation-data.bin
       - test
   - build.gradle
@@ -436,6 +543,9 @@
                   - Clue
                     - ClueBoardResponse.java
                     - ClueController.java
+                    - ClueReleaseController.java
+                    - ClueReleaseService.java
+                    - ClueReleaseTypes.java
                     - ClueService.java
                     - ClueSetSaveRequest.java
                     - SceneClue.java
@@ -460,6 +570,10 @@
                   - EventResponse.java
                   - EventService.java
                   - EventStatusController.java
+                  - Guess
+                    - GuessController.java
+                    - GuessService.java
+                    - GuessTypes.java
                   - Invite
                     - dto
                       - InviteCreateRequest.java
@@ -502,12 +616,18 @@
                     - EventRoleService.java
                   - Participant
                     - dto
+                      - ParticipantCaptainRequest.java
                       - ParticipantTeamAssignRequest.java
                     - EventParticipant.java
                     - EventParticipantController.java
                     - EventParticipantRepository.java
                     - EventParticipantResponse.java
                     - EventParticipantService.java
+                  - Schedule
+                    - BalancedScheduleGenerator.java
+                    - ScheduleController.java
+                    - ScheduleService.java
+                    - ScheduleTypes.java
                   - Scoring
                     - Adapter
                       - ExactScore.java
@@ -536,6 +656,10 @@
                     - ScoreEntryResponse.java
                     - ScoringController.java
                     - ScoringService.java
+                    - Settlement
+                      - OfficialResultController.java
+                      - OfficialResultService.java
+                      - OfficialResultTypes.java
                   - Team
                     - dto
                       - TeamSaveRequest.java
@@ -606,6 +730,9 @@
             - V11__add_scene_clues.sql
             - V12__add_scene_titles.sql
             - V13__add_scoring_plans.sql
+            - V14__add_guessing_state_and_clue_releases.sql
+            - V15__add_guesses.sql
+            - V16__add_live_window_start.sql
             - V1__verify_flyway_connection.sql
             - V2__create_initial_schema.sql
             - V3__add_murise_app_rls_policies.sql
@@ -627,13 +754,21 @@
                 - JwtValidationConfigTest.java
               - modules
                 - Event
+                  - Clue
+                    - ClueReleaseServiceTest.java
+                  - Guess
+                    - GuessServiceTest.java
                   - Live
                     - EventLiveServiceTest.java
                   - Membership
                     - EventRoleServiceTest.java
+                  - Schedule
+                    - BalancedScheduleGeneratorTest.java
                   - Scoring
                     - Adapter
                       - ExactScoreTest.java
+                    - Settlement
+                      - OfficialResultServiceTest.java
                   - Title
                     - TitleNormalizerTest.java
                 - Picture
@@ -675,6 +810,8 @@
             - page.tsx
           - play
             - page.tsx
+          - schedule
+            - page.tsx
           - scoring
             - page.tsx
           - tv
@@ -706,12 +843,15 @@
       - Event
         - Clue
           - CluePanel.tsx
+          - ClueReleasePanel.tsx
         - EventCreateForm.tsx
         - EventGame
           - EventGamePanel.tsx
         - EventPages.tsx
         - EventPanel.tsx
         - EventShell.tsx
+        - Guess
+          - SecretSceneGuessPanel.tsx
         - Invite
           - InvitePanel.tsx
           - JoinView.tsx
@@ -723,7 +863,10 @@
           - ParticipantPanel.tsx
         - Role
           - EventRolePanel.tsx
+        - Schedule
+          - SchedulePanel.tsx
         - Scoring
+          - RankingStatusPanel.tsx
           - ScoreboardPanel.tsx
           - ScorePreviewPanel.tsx
           - ScoringPlanPanel.tsx
@@ -791,6 +934,11 @@
           - event-game.service.ts
           - event-game.type.ts
           - index.ts
+        - Guess
+          - guess.controller.ts
+          - guess.service.ts
+          - guess.type.ts
+          - index.ts
         - index.ts
         - Invite
           - index.ts
@@ -819,6 +967,11 @@
           - role.controller.ts
           - role.service.ts
           - role.type.ts
+        - Schedule
+          - index.ts
+          - schedule.controller.ts
+          - schedule.service.ts
+          - schedule.type.ts
         - Scoring
           - index.ts
           - score-preview.ts

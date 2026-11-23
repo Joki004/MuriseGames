@@ -44,4 +44,26 @@ export const ParticipantController = {
       );
     }
   },
+
+  async setCaptain(
+    eventId: string,
+    participantId: string,
+    captain: boolean,
+  ): Promise<EventParticipantResponse> {
+    try {
+      const response = await ParticipantService.setCaptain(
+        eventId,
+        participantId,
+        captain,
+      );
+      if (!response.data) {
+        throw new Error("Captain update was not confirmed.");
+      }
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not update team captain."),
+      );
+    }
+  },
 };

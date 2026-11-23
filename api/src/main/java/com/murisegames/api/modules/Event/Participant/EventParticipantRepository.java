@@ -11,6 +11,8 @@ public interface EventParticipantRepository
 
     List<EventParticipant> findByEventIdOrderByCreatedAtAsc(UUID eventId);
 
+    List<EventParticipant> findByEventIdAndTeamId(UUID eventId, UUID teamId);
+
     Optional<EventParticipant> findByIdAndEventId(UUID id, UUID eventId);
 
     Optional<EventParticipant> findByEventIdAndUserId(UUID eventId, UUID userId);

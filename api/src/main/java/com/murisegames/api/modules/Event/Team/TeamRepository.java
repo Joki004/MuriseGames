@@ -21,9 +21,15 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
                 select 1
                 from murise.schedule_versions
                 where event_id = :eventId
+                  and status = 'published'
+            ) or exists (
+                select 1
+                from murise.fixtures f
+                where f.event_id = :eventId
+                  and f.status not in ('scheduled', 'voided')
             )
             """, nativeQuery = true)
-    boolean hasSchedule(@Param("eventId") UUID eventId);
+    boolean hasPublishedScheduleOrPlay(@Param("eventId") UUID eventId);
 
     @Query(value = """
             select exists (

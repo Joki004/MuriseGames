@@ -68,4 +68,28 @@ public class EventParticipantController {
                 )
         );
     }
+
+    @Operation(summary = "Appoint or remove a team captain")
+    @PatchMapping("/{participantId}/captain")
+    public ResponseEntity<CustomApiResponse<EventParticipantResponse>> setCaptain(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @PathVariable UUID participantId,
+            @RequestBody com.murisegames.api.modules.Event.Participant.dto.ParticipantCaptainRequest request
+    ) {
+        EventParticipantResponse updated = participantService.setCaptain(
+                jwt,
+                eventId,
+                participantId,
+                request.captain()
+        );
+
+        return ResponseEntity.ok(
+                CustomApiResponse.success(
+                        updated,
+                        request.captain() ? "Team captain appointed." : "Team captain removed.",
+                        HttpStatus.OK.value()
+                )
+        );
+    }
 }

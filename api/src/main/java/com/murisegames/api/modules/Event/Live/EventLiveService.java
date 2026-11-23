@@ -11,9 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -67,6 +65,7 @@ public class EventLiveService {
 
         EventState state = lockOrInitState(eventId);
         state.setCurrentEventGameId(request.currentEventGameId());
+        state.setCurrentWindowStartAt(request.windowStartAt());
         state.setPhase(request.phase().trim());
         state.setPausedRemainingMs(null);
         state.setDeadlineAt(
@@ -175,6 +174,7 @@ public class EventLiveService {
                 .executeUpdate();
 
         state.setCurrentEventGameId(null);
+        state.setCurrentWindowStartAt(null);
         state.setPhase("lobby");
         state.setDeadlineAt(null);
         state.setPausedRemainingMs(null);
@@ -246,14 +246,19 @@ public class EventLiveService {
                     meta.scoreboardVisibility(),
                     roles,
                     null,
+                    null,
                     "lobby",
                     null,
                     null,
                     false,
                     null,
-                    readyTeamIds
+                    readyTeamIds,
+                    List.of()
             );
         }
+
+        List<EventSnapshotResponse.ActiveFixtureView> activeFixtures =
+                loadActiveFixtures(eventId, state.getCurrentEventGameId(), state.getCurrentWindowStartAt());
 
         return new EventSnapshotResponse(
                 eventId,
@@ -263,13 +268,141 @@ public class EventLiveService {
                 meta.scoreboardVisibility(),
                 roles,
                 state.getCurrentEventGameId(),
+                state.getCurrentWindowStartAt(),
                 state.getPhase(),
                 state.getDeadlineAt(),
                 state.getPausedRemainingMs(),
                 state.getPausedRemainingMs() != null,
                 state.getUpdatedAt(),
-                readyTeamIds
+                readyTeamIds,
+                activeFixtures
         );
+    }
+
+    private List<EventSnapshotResponse.ActiveFixtureView> loadActiveFixtures(
+            UUID eventId,
+            UUID currentEventGameId,
+            Instant windowStartAt
+    ) {
+        if (currentEventGameId == null && windowStartAt == null) {
+            return List.of();
+        }
+
+        var scheduleQuery = entityManager.createNativeQuery("""
+                select id
+                from murise.schedule_versions
+                where event_id = :eventId
+                  and status in ('published', 'draft')
+                order by case when status = 'published' then 0 else 1 end asc,
+                         version desc
+                limit 1
+                """);
+        if (scheduleQuery == null) {
+            return List.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object> scheduleIds = scheduleQuery
+                .setParameter("eventId", eventId)
+                .getResultList();
+
+        if (scheduleIds.isEmpty()) {
+            return List.of();
+        }
+
+        UUID scheduleId = UUID.fromString(String.valueOf(scheduleIds.getFirst()));
+
+        String sql = windowStartAt != null
+                ? """
+                  select f.id, f.event_game_id, gd.name, gd.code, f.round_number, f.status,
+                         s.start_at, s.end_at, r.name,
+                         ft.team_id, t.name, t.color, ft.side
+                  from murise.fixtures f
+                  join murise.schedule_slots s on s.id = f.slot_id
+                  join murise.event_games eg on eg.id = f.event_game_id
+                  join murise.game_definitions gd on gd.id = eg.game_definition_id
+                  left join murise.slot_resource_assignments sra on sra.slot_id = s.id
+                  left join murise.event_resources r on r.id = sra.resource_id
+                  left join murise.fixture_teams ft on ft.fixture_id = f.id
+                  left join murise.teams t on t.id = ft.team_id
+                  where f.event_id = :eventId
+                    and f.schedule_version_id = :scheduleId
+                    and s.start_at = :windowStartAt
+                    and f.status <> 'voided'
+                  order by f.round_number asc, f.id asc
+                  """
+                : """
+                  select f.id, f.event_game_id, gd.name, gd.code, f.round_number, f.status,
+                         s.start_at, s.end_at, r.name,
+                         ft.team_id, t.name, t.color, ft.side
+                  from murise.fixtures f
+                  join murise.schedule_slots s on s.id = f.slot_id
+                  join murise.event_games eg on eg.id = f.event_game_id
+                  join murise.game_definitions gd on gd.id = eg.game_definition_id
+                  left join murise.slot_resource_assignments sra on sra.slot_id = s.id
+                  left join murise.event_resources r on r.id = sra.resource_id
+                  left join murise.fixture_teams ft on ft.fixture_id = f.id
+                  left join murise.teams t on t.id = ft.team_id
+                  where f.event_id = :eventId
+                    and f.schedule_version_id = :scheduleId
+                    and f.event_game_id = :eventGameId
+                    and f.status <> 'voided'
+                  order by s.start_at asc, f.round_number asc, f.id asc
+                  """;
+
+        var query = entityManager.createNativeQuery(sql)
+                .setParameter("eventId", eventId)
+                .setParameter("scheduleId", scheduleId);
+
+        if (windowStartAt != null) {
+            query.setParameter("windowStartAt", windowStartAt);
+        } else {
+            query.setParameter("eventGameId", currentEventGameId);
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query.getResultList();
+
+        Map<UUID, List<Object[]>> grouped = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            grouped.computeIfAbsent(UUID.fromString(String.valueOf(row[0])), k -> new ArrayList<>())
+                    .add(row);
+        }
+
+        List<EventSnapshotResponse.ActiveFixtureView> result = new ArrayList<>();
+        for (var entry : grouped.entrySet()) {
+            Object[] first = entry.getValue().getFirst();
+            List<EventSnapshotResponse.ActiveFixtureTeamView> teams = entry.getValue().stream()
+                    .filter(r -> r[9] != null)
+                    .map(r -> new EventSnapshotResponse.ActiveFixtureTeamView(
+                            UUID.fromString(String.valueOf(r[9])),
+                            String.valueOf(r[10]),
+                            String.valueOf(r[11]),
+                            String.valueOf(r[12])
+                    ))
+                    .toList();
+
+            result.add(new EventSnapshotResponse.ActiveFixtureView(
+                    entry.getKey(),
+                    UUID.fromString(String.valueOf(first[1])),
+                    String.valueOf(first[2]),
+                    String.valueOf(first[3]),
+                    ((Number) first[4]).intValue(),
+                    String.valueOf(first[5]),
+                    toInstant(first[6]),
+                    toInstant(first[7]),
+                    first[8] != null ? String.valueOf(first[8]) : null,
+                    teams
+            ));
+        }
+        return result;
+    }
+
+    private static Instant toInstant(Object value) {
+        if (value instanceof Instant i) return i;
+        if (value instanceof java.sql.Timestamp ts) return ts.toInstant();
+        if (value instanceof java.time.OffsetDateTime odt) return odt.toInstant();
+        return Instant.parse(String.valueOf(value));
     }
 
     private EventMeta loadEventMeta(UUID eventId) {

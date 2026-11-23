@@ -4,7 +4,11 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { Badge, Card } from "@/component/ui";
-
+import { EventController, type EventDetailResponse } from "@/modules/Event";
+import {
+  ClueController,
+  type ReleasedCluesResponse,
+} from "@/modules/Event/Clue";
 import {
   EventGameController,
   type EventGameResponse,
@@ -14,7 +18,8 @@ import {
   ScoringController,
   type ScoreboardResponse,
 } from "@/modules/Event/Scoring";
-import { EventController, type EventDetailResponse } from "@/modules/Event";
+import { TeamController, type TeamResponse } from "@/modules/Event/Team";
+
 function formatMs(ms: number) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const mins = Math.floor(totalSeconds / 60);
@@ -27,16 +32,22 @@ export function TvScreenView() {
   const { snapshot, clockOffsetMs } = useEventSnapshot(eventId);
 
   const [games, setGames] = useState<EventGameResponse[]>([]);
+  const [teams, setTeams] = useState<TeamResponse[]>([]);
   const [scoreboard, setScoreboard] = useState<ScoreboardResponse | null>(null);
+  const [releasedClues, setReleasedClues] =
+    useState<ReleasedCluesResponse | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [event, setEvent] = useState<EventDetailResponse | null>(null);
- useEffect(() => {
+
+  useEffect(() => {
     void Promise.all([
       EventController.getDetail(eventId),
       EventGameController.list(eventId),
-    ]).then(([ev, g]) => {
+      TeamController.list(eventId),
+    ]).then(([ev, g, t]) => {
       setEvent(ev);
       setGames(g);
+      setTeams(t.teams);
     });
   }, [eventId]);
 
@@ -45,6 +56,12 @@ export function TvScreenView() {
       .then(setScoreboard)
       .catch(() => setScoreboard(null));
   }, [eventId, snapshot?.version, snapshot?.scoreboardVisibility]);
+
+  useEffect(() => {
+    void ClueController.getReleased(eventId)
+      .then(setReleasedClues)
+      .catch(() => setReleasedClues(null));
+  }, [eventId, snapshot?.version]);
 
   useEffect(() => {
     if (!snapshot?.deadlineAt || snapshot.paused) return;
@@ -67,6 +84,21 @@ export function TvScreenView() {
   })();
 
   const activeGame = games.find((g) => g.id === snapshot?.currentEventGameId);
+  const activeFixtures = snapshot?.activeFixtures ?? [];
+  const distinctGames = Array.from(
+    new Set(activeFixtures.map((f) => f.gameName)),
+  );
+
+  const restingTeams = (() => {
+    if (activeFixtures.length === 0) return [];
+    const playingIds = new Set(
+      activeFixtures
+        .flatMap((f) => f.teams)
+        .filter((t) => t.side !== "bye")
+        .map((t) => t.teamId),
+    );
+    return teams.filter((t) => !playingIds.has(t.id));
+  })();
 
   return (
     <RequireAccount>
@@ -92,15 +124,60 @@ export function TvScreenView() {
         <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
           <Card className="flex flex-col items-center justify-center gap-4 p-8 text-center">
             <p className="text-xl font-semibold text-muted">
-              {activeGame ? activeGame.name : "Waiting for next activity"}
+              {distinctGames.length > 1
+                ? "Concurrent Games in Progress"
+                : activeGame
+                  ? activeGame.name
+                  : (distinctGames[0] ?? "Waiting for next activity")}
             </p>
             <p className="font-mono text-7xl font-extrabold tracking-tight sm:text-8xl">
               {remainingMs != null ? formatMs(remainingMs) : "--:--"}
             </p>
-            {activeGame?.summary && (
+            {distinctGames.length <= 1 && activeGame?.summary && (
               <p className="max-w-xl text-base text-muted">
                 {activeGame.summary}
               </p>
+            )}
+
+            {activeFixtures.length > 0 && (
+              <div className="mt-4 w-full space-y-2 border-t border-border pt-4 text-left">
+                <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted">
+                  Active Matchups
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {activeFixtures.map((f) => {
+                    const isBye = f.teams.some((t) => t.side === "bye");
+                    return (
+                      <div
+                        key={f.fixtureId}
+                        className="rounded-[var(--ui-radius-control)] border border-border bg-background/60 px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                          <Badge>{f.gameName}</Badge>
+                          <span>
+                            Round {f.roundNumber}
+                            {f.resourceName ? ` · ${f.resourceName}` : ""}
+                          </span>
+                        </div>
+                        <p className="mt-1.5 text-lg font-bold">
+                          {isBye
+                            ? `${f.teams[0]?.teamName ?? "Team"} (Resting / Bye)`
+                            : f.teams.map((t) => t.teamName).join(" vs ")}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {restingTeams.length > 0 && (
+                  <p className="pt-2 text-center text-sm text-muted">
+                    On short break:{" "}
+                    <span className="font-semibold text-foreground">
+                      {restingTeams.map((t) => t.name).join(", ")}
+                    </span>
+                  </p>
+                )}
+              </div>
             )}
           </Card>
 
@@ -146,6 +223,42 @@ export function TvScreenView() {
             )}
           </Card>
         </section>
+
+        {releasedClues && releasedClues.currentStage > 0 && (
+          <Card className="space-y-4 p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">
+                Secret Scene Clues · Stage {releasedClues.currentStage} of 3
+              </h2>
+              <Badge
+                tone={
+                  releasedClues.status === "closed" ? "warning" : "success"
+                }
+              >
+                {releasedClues.status === "closed"
+                  ? "Guessing closed"
+                  : "Guessing open"}
+              </Badge>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {releasedClues.clues.map((c) => (
+                <div
+                  key={`${c.teamId}-${c.stage}`}
+                  className="rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-4"
+                >
+                  <div className="flex items-center justify-between text-xs text-muted">
+                    <span className="font-semibold text-foreground">
+                      {c.teamName}
+                    </span>
+                    <span>Clue {c.stage}</span>
+                  </div>
+                  <p className="mt-2 text-base">{c.body}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </main>
     </RequireAccount>
   );
