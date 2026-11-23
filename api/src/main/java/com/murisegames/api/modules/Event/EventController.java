@@ -1,6 +1,7 @@
 package com.murisegames.api.modules.Event;
 
 import com.murisegames.api.modules.Event.dto.EventCreateRequest;
+import com.murisegames.api.modules.Event.dto.EventUpdateRequest;
 import com.murisegames.api.utils.CustomApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,6 +52,20 @@ public class EventController {
         return ResponseEntity.ok(CustomApiResponse.success(
                 response,
                 "Events retrieved.",
+                HttpStatus.OK.value()
+        ));
+    }
+
+    @Operation(summary = "Organizer: edit event name, theme, start time, venue and joining policy")
+    @PutMapping("/{eventId}")
+    public ResponseEntity<CustomApiResponse<EventDetailResponse>> update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @Valid @RequestBody EventUpdateRequest request
+    ) {
+        return ResponseEntity.ok(CustomApiResponse.success(
+                eventService.update(jwt, eventId, request),
+                "Event details saved.",
                 HttpStatus.OK.value()
         ));
     }

@@ -14,6 +14,7 @@ import { EventRolePanel } from "./Role/EventRolePanel";
 import { AsyncContent } from "@/component/ui/AsyncContent";
 import { ParticipantController } from "@/modules/Event/Participant";
 import { EventLivePanel } from "./Live/EventLivePanel";
+import { RefereeAssignmentPanel } from "./Referee/RefereeAssignmentPanel";
 import {
   Alert,
   Badge,
@@ -252,6 +253,7 @@ export function EventPeople() {
         refreshTrigger={rosterRevision}
       />
       {canManage && <EventRolePanel eventId={event.id} />}
+      {canManage && <RefereeAssignmentPanel eventId={event.id} />}
     </div>
   );
 }
