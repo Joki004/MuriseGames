@@ -1,6 +1,6 @@
 import { extractApiErrorMessage } from "@/modules/Api/api.service";
 import { ClueService } from "./clue.service";
-import type { ClueBoardResponse, ClueSetSaveRequest } from "./clue.type";
+import type { ClueBoardResponse, ClueSetSaveRequest, ReleasedCluesResponse, StageCommandRequest } from "./clue.type";
 
 export const CLUE_STAGES = 3;
 export const CLUE_MAX_LENGTH = 280;
@@ -52,6 +52,48 @@ export const ClueController = {
       return response.data;
     } catch (error: unknown) {
       throw new Error(extractApiErrorMessage(error, "Could not save the clues."));
+    }
+  },
+
+  async getReleased(eventId: string): Promise<ReleasedCluesResponse> {
+    try {
+      const res = await ClueService.getReleased(eventId);
+      if (!res.data) throw new Error("Released clues were not returned.");
+      return res.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not load released clues."),
+      );
+    }
+  },
+
+  async releaseNext(
+    eventId: string,
+    payload: StageCommandRequest,
+  ): Promise<ReleasedCluesResponse> {
+    try {
+      const res = await ClueService.releaseNext(eventId, payload);
+      if (!res.data) throw new Error("Release was not confirmed.");
+      return res.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not release the next clue stage."),
+      );
+    }
+  },
+
+  async closeGuessing(
+    eventId: string,
+    payload: StageCommandRequest,
+  ): Promise<ReleasedCluesResponse> {
+    try {
+      const res = await ClueService.closeGuessing(eventId, payload);
+      if (!res.data) throw new Error("Guessing close was not confirmed.");
+      return res.data;
+    } catch (error: unknown) {
+      throw new Error(
+        extractApiErrorMessage(error, "Could not close guessing."),
+      );
     }
   },
 };
