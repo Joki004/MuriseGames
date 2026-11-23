@@ -383,8 +383,6 @@
           - com.murisegames.api.modules.Event.Membership.EventRoleServiceTest
             - index.html
           - com.murisegames.api.modules.Event.Schedule.BalancedScheduleGeneratorTest
-            - fourTeamsAcrossThreeHeadToHeadGamesFaceEveryOpponentOnce().html
-            - fourTeamsNeverRematchRegardlessOfSeed().html
             - index.html
           - com.murisegames.api.modules.Event.Scoring.Adapter.ExactScoreTest
             - index.html
@@ -451,40 +449,11 @@
         - compileTransaction
           - backup-dir
           - stash-dir
-            - ClueController.class.uniqueId13
-            - ClueReleaseController.class.uniqueId3
-            - ClueReleaseService$StateRow.class.uniqueId0
-            - ClueReleaseService.class.uniqueId20
-            - ClueService.class.uniqueId31
-            - EventParticipantController.class.uniqueId19
-            - EventParticipantService.class.uniqueId18
-            - GuessController.class.uniqueId12
-            - GuessService$StateSnapshot.class.uniqueId25
-            - GuessService.class.uniqueId2
-            - JoinRequestController.class.uniqueId26
-            - JoinRequestService.class.uniqueId14
-            - PictureCleanup.class.uniqueId22
-            - PictureController$EmojiRequest.class.uniqueId21
-            - PictureController.class.uniqueId7
-            - PictureService.class.uniqueId32
-            - PictureTransactions$1.class.uniqueId10
-            - PictureTransactions$Selection.class.uniqueId17
-            - PictureTransactions$Target.class.uniqueId27
-            - PictureTransactions.class.uniqueId11
-            - ScheduleController.class.uniqueId16
-            - ScheduleService.class.uniqueId9
-            - ScoringController.class.uniqueId23
-            - ScoringPlanController.class.uniqueId4
-            - ScoringPlanService$Assignment.class.uniqueId5
-            - ScoringPlanService$SourceFixture.class.uniqueId28
-            - ScoringPlanService.class.uniqueId1
-            - ScoringService$EventScoreboardState.class.uniqueId33
-            - ScoringService.class.uniqueId15
-            - TeamController.class.uniqueId8
-            - TeamRepository.class.uniqueId6
-            - TeamService.class.uniqueId24
-            - TitleController.class.uniqueId30
-            - TitleService.class.uniqueId29
+            - BalancedScheduleGenerator$GameInput.class.uniqueId3
+            - BalancedScheduleGenerator$GenerationResult.class.uniqueId0
+            - BalancedScheduleGenerator$PlannedSlot.class.uniqueId2
+            - BalancedScheduleGenerator.class.uniqueId4
+            - ScheduleService.class.uniqueId1
         - previous-compilation-data.bin
       - compileTestJava
         - compileTransaction

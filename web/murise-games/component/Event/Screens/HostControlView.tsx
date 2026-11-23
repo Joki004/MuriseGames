@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { PageShell } from "@/component/Layout/PageShell";
+import { FixtureResultButton } from "@/component/Event/Scoring/FixtureResultButton";
 import {
   Alert,
   Badge,
@@ -285,6 +286,15 @@ export function HostControlView() {
                             ? `${f.teams[0]?.teamName ?? "Team"} (Resting / Bye)`
                             : f.teams.map((t) => t.teamName).join(" vs ")}
                         </p>
+                        {!isBye && (
+                          <div className="mt-2">
+                            <FixtureResultButton
+                              eventId={eventId}
+                              fixture={f}
+                              onChanged={() => void refetch()}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}

@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
 import { Badge, Card } from "@/component/ui";
 import { EventController, type EventDetailResponse } from "@/modules/Event";
 import {
@@ -259,6 +260,8 @@ export function TvScreenView() {
             </div>
           </Card>
         )}
+
+        <RevealBoard eventId={eventId} variant="tv" />
       </main>
     </RequireAccount>
   );

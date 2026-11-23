@@ -5,6 +5,7 @@ import {
 import { ScoringService } from "./scoring.service";
 import type {
   CancelFixtureRequest,
+  FixtureSettlementResponse,
   RankingStatusResponse,
   RecordFixtureResultRequest,
   ScoreEntryCreateRequest,
@@ -111,7 +112,7 @@ export const ScoringController = {
     eventId: string,
     fixtureId: string,
     payload: RecordFixtureResultRequest,
-  ) {
+  ): Promise<FixtureSettlementResponse | null> {
     try {
       const response = await ScoringService.recordFixtureResult(
         eventId,
