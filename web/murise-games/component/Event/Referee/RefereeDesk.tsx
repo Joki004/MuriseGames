@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useEventDetail } from "@/component/Event/EventShell";
 import { FixtureResultButton } from "@/component/Event/Scoring/FixtureResultButton";
 import {
@@ -34,25 +34,40 @@ export function RefereeDesk() {
   const [desk, setDesk] = useState<RefereeDeskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
 
-  const load = useCallback(async () => {
-    try {
-      setDesk(await RefereeController.desk(event.id));
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not load your desk.");
-    } finally {
-      setLoading(false);
-    }
-  }, [event.id]);
-
+  // State is only set in promise callbacks, never synchronously in the effect body.
   useEffect(() => {
     if (!isReferee) return;
-    void load();
-    // Keep statuses fresh when the host or another referee records a result.
-    const id = setInterval(() => void load(), REFRESH_MS);
+    let active = true;
+    RefereeController.desk(event.id)
+      .then((data) => {
+        if (active) {
+          setDesk(data);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Could not load your desk.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isReferee, event.id, tick]);
+
+  // Keep statuses fresh when the host or another referee records a result.
+  useEffect(() => {
+    if (!isReferee) return;
+    const id = setInterval(() => setTick((n) => n + 1), REFRESH_MS);
     return () => clearInterval(id);
-  }, [isReferee, load]);
+  }, [isReferee]);
+
+  const reload = () => setTick((n) => n + 1);
 
   if (!isReferee) {
     return (
@@ -88,7 +103,7 @@ export function RefereeDesk() {
                 {toRecord} to record
               </Badge>
             )}
-            <Button variant="secondary" onClick={() => void load()}>
+            <Button variant="secondary" onClick={reload}>
               Refresh
             </Button>
           </div>
@@ -151,7 +166,7 @@ export function RefereeDesk() {
                       fixture={f}
                       games={desk.games}
                       canCancel={false}
-                      onChanged={() => void load()}
+                      onChanged={reload}
                     />
                   </div>
                 )}
