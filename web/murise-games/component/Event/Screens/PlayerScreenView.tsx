@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
+import { AlibiPlayerCard } from "@/component/Event/Alibi/Game/AlibiPlayerCard";
 import { TeamResultsCard } from "@/component/Event/Scoring/TeamResultsCard";
 import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
 import { PageShell } from "@/component/Layout/PageShell";
@@ -135,6 +136,9 @@ export function PlayerScreenView() {
         {(error || actionError) && (
           <Alert tone="error">{actionError ?? error}</Alert>
         )}
+
+        {/* Only shows when this player is in an Alibi pair. */}
+        <AlibiPlayerCard eventId={eventId} />
 
         <Card className="space-y-5 text-center">
           <div className="flex justify-center gap-2">

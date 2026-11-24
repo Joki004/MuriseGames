@@ -18,7 +18,15 @@ interface EventRolePanelProps {
   eventId: string;
 }
 
-const DELEGATABLE_ROLES: EventRole[] = ["ORGANIZER", "REFEREE"];
+const DELEGATABLE_ROLES: EventRole[] = ["ORGANIZER", "REFEREE", "CASE_WRITER"];
+
+const ROLE_LABELS: Record<EventRole, string> = {
+  ORGANIZER: "organizer",
+  REFEREE: "referee",
+  PLAYER: "player",
+  VIEWER: "viewer",
+  CASE_WRITER: "case writer",
+};
 
 export function EventRolePanel({ eventId }: EventRolePanelProps) {
   const [revision, setRevision] = useState(0);
@@ -68,8 +76,10 @@ export function EventRolePanel({ eventId }: EventRolePanelProps) {
           <div>
             <CardTitle>Organizers &amp; roles</CardTitle>
             <CardDescription>
-              Appoint co-organizers or referees. Removing the last active
-              organizer is blocked.
+              Appoint co-organizers, referees or case writers. A case writer
+              can only write Alibi cases and open their own; remove the role
+              once the cases are ready. Removing the last active organizer is
+              blocked.
             </CardDescription>
           </div>
           <Button variant="secondary" onClick={() => setRevision((v) => v + 1)}>
@@ -105,7 +115,7 @@ export function EventRolePanel({ eventId }: EventRolePanelProps) {
                           key={role}
                           tone={role === "ORGANIZER" ? "accent" : undefined}
                         >
-                          {role}
+                          {ROLE_LABELS[role] ?? role}
                         </Badge>
                       ))}
                     </div>
@@ -127,8 +137,8 @@ export function EventRolePanel({ eventId }: EventRolePanelProps) {
                           {busyKey === key
                             ? "Saving…"
                             : hasRole
-                              ? `Revoke ${role.toLowerCase()}`
-                              : `Make ${role.toLowerCase()}`}
+                              ? `Revoke ${ROLE_LABELS[role]}`
+                              : `Make ${ROLE_LABELS[role]}`}
                         </Button>
                       );
                     })}

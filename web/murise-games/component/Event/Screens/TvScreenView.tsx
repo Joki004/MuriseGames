@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
 import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
+import { AlibiTvCard } from "@/component/Event/Alibi/Game/AlibiTvCard";
 import {
   guessPointsForStage,
   stageTierLabel,
@@ -125,6 +126,9 @@ export function TvScreenView() {
             </Badge>
           </div>
         </header>
+
+        {/* Only shows while an Alibi round is being played or revealed. */}
+        <AlibiTvCard eventId={eventId} />
 
         <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
           <Card className="flex flex-col items-center justify-center gap-4 p-8 text-center">

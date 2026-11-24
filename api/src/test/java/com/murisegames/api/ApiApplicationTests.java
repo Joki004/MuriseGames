@@ -30,6 +30,13 @@ import com.murisegames.api.modules.Event.Clue.SceneClueRepository;
 import com.murisegames.api.modules.Event.Clue.SceneEntryRepository;
 import com.murisegames.api.modules.Event.Title.SceneSecretRepository;
 import com.murisegames.api.modules.Event.Title.TitleAliasRepository;
+import com.murisegames.api.modules.Event.Alibi.AlibiCaseAccessRequestRepository;
+import com.murisegames.api.modules.Event.Alibi.AlibiCaseRepository;
+import com.murisegames.api.modules.Event.Alibi.AlibiCaseVersionRepository;
+import com.murisegames.api.modules.Event.Alibi.Game.AlibiAnswerRepository;
+import com.murisegames.api.modules.Event.Alibi.Game.AlibiPromptRepository;
+import com.murisegames.api.modules.Event.Alibi.Game.AlibiRoundRepository;
+import com.murisegames.api.modules.Event.Alibi.Game.AlibiSessionRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -114,6 +121,27 @@ class ApiApplicationTests {
 
     @MockitoBean
     private ScoringPlanRepository scoringPlanRepository;
+
+    @MockitoBean
+    private AlibiCaseRepository alibiCaseRepository;
+
+    @MockitoBean
+    private AlibiCaseVersionRepository alibiCaseVersionRepository;
+
+    @MockitoBean
+    private AlibiCaseAccessRequestRepository alibiCaseAccessRequestRepository;
+
+    @MockitoBean
+    private AlibiSessionRepository alibiSessionRepository;
+
+    @MockitoBean
+    private AlibiRoundRepository alibiRoundRepository;
+
+    @MockitoBean
+    private AlibiPromptRepository alibiPromptRepository;
+
+    @MockitoBean
+    private AlibiAnswerRepository alibiAnswerRepository;
 
     @Test
     void contextLoads() {
