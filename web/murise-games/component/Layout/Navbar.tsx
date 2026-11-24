@@ -25,7 +25,9 @@ export function Navbar() {
   return (
     <Suspense
       fallback={
-        <header className="h-[73px] border-b border-border bg-background" />
+        <header 
+        data-no-print="true"
+        className="h-[73px] border-b border-border bg-background" />
       }
     >
       <RouteNavbar />
@@ -94,6 +96,7 @@ function Navigation({ pathname }: { pathname: string }) {
 
   return (
     <header
+      data-no-print="true"
       className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur"
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
