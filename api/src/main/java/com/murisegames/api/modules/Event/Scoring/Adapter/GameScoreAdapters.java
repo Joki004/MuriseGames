@@ -95,8 +95,9 @@ public final class GameScoreAdapters {
                     10,
                     "Enter the number of answers accepted as matching "
                             + "by the judge for each pair.",
-                    "The judge decides semantic matches. The interview "
-                            + "procedure still needs its recorded rule decision.",
+                    "The judge decides semantic matches. Played on phones in the "
+                            + "app (GM-046): typed answers, 30 s per question, recorded "
+                            + "from the Alibi game page.",
                     Map.of(
                             "pairs", 2,
                             "questions_per_pair", 10,
