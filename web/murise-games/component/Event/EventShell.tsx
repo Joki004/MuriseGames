@@ -119,6 +119,9 @@ function EventHeader() {
           { href: `/events/${event.id}/schedule`, label: "Schedule" },
         ]
       : []),
+    ...(canManage || roles.includes("CASE_WRITER")
+      ? [{ href: `${base}/alibi`, label: "Alibi cases" }]
+      : []),
     ...(roles.includes("REFEREE")
       ? [{ href: `${base}/referee`, label: "Referee" }]
       : []),

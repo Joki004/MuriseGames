@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class EventRoleService {
 
     private static final Set<String> ALLOWED_EVENT_ROLES =
-            Set.of("ORGANIZER", "REFEREE", "PLAYER", "VIEWER");
+            Set.of("ORGANIZER", "REFEREE", "PLAYER", "VIEWER", "CASE_WRITER");
 
     private final EventMembershipRepository membershipRepository;
     private final EventRoleGrantRepository roleGrantRepository;
