@@ -18,7 +18,9 @@ export function PageShell({
       id="main-content"
       className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-10"
     >
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header 
+      data-no-print="true"
+      className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             {title}

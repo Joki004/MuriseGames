@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
+import { HostOperationsPanel } from "@/component/Event/Operations/HostOperationsPanel";
 import { PageShell } from "@/component/Layout/PageShell";
 import { FixtureResultButton } from "@/component/Event/Scoring/FixtureResultButton";
 import {
@@ -195,7 +196,10 @@ export function HostControlView() {
           <Alert tone="error">{actionError ?? error}</Alert>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        <div
+          data-no-print="true"
+          className="grid gap-6 lg:grid-cols-[1.2fr_1fr]"
+        >
           <Card className="space-y-5">
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
@@ -473,6 +477,12 @@ export function HostControlView() {
             </Button>
           </div>
         </Dialog>
+
+        <HostOperationsPanel
+          eventId={eventId}
+          teams={teams}
+          onSynced={() => void refetch()}
+        />
       </PageShell>
     </RequireAccount>
   );
