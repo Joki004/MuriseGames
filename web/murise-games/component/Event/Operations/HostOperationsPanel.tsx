@@ -39,7 +39,7 @@ export function HostOperationsPanel({
   const [queue, setQueue] = useState<OfflineQueuedRow[]>([]);
   const [sheetKey, setSheetKey] = useState("table-sheet-1");
   const [rowNumber, setRowNumber] = useState("1");
-  const [teamId, setTeamId] = useState("");
+  const [pickedTeamId, setTeamId] = useState("");
   const [category, setCategory] = useState<OfflineScoreCategory>("game_points");
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
@@ -55,15 +55,21 @@ export function HostOperationsPanel({
   const [loadingPacket, setLoadingPacket] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setQueue(loadOfflineQueue(eventId));
-  }, [eventId]);
+  // Falls back to the first team when nothing (or a deleted team) is picked.
+  const teamId = teams.some((t) => t.id === pickedTeamId)
+    ? pickedTeamId
+    : (teams[0]?.id ?? "");
 
+  // The queue lives in browser storage, so it is read after mount, in a callback.
   useEffect(() => {
-    if (!teamId && teams.length > 0) {
-      setTeamId(teams[0].id);
-    }
-  }, [teams, teamId]);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setQueue(loadOfflineQueue(eventId));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   // Trigger window.print() only after packet state has committed and preview dialog is closed.
   useEffect(() => {
@@ -409,8 +415,8 @@ export function HostOperationsPanel({
           )}
 
           <p className="text-xs text-muted">
-            Note: Alibi &amp; Social Case prompts are physical-only and are not
-            stored in the event database.
+            Note: Alibi cases and Social Scenario cards are not included in
+            this packet. Print them separately if you need a paper backup.
           </p>
 
           <div className="flex flex-wrap gap-2 pt-2">
