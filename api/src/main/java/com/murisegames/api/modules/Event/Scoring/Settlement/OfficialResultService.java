@@ -354,7 +354,7 @@ public class OfficialResultService {
             }
         }
 
-        if (adapter.headToHead() && planned.teamIds().size() == 2) {
+        if (adapter.complementary() && planned.teamIds().size() == 2) {
             List<Integer> a = teamValues.get(planned.teamIds().get(0));
             List<Integer> b = teamValues.get(planned.teamIds().get(1));
             for (int i = 0; i < adapter.fields().size(); i++) {

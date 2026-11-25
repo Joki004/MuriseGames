@@ -44,7 +44,9 @@ public class ScorePreviewService {
             int maximumPerField,
             String inputHint,
             String decisionNote,
-            String unavailableReason
+            String unavailableReason,
+            /** Head-to-head values per field always total maximumPerField. */
+            boolean complementary
     ) {
     }
 
@@ -213,7 +215,9 @@ public class ScorePreviewService {
                         number
                 );
 
-                for (int part = 0; part < option.fields().size(); part++) {
+                for (int part = 0;
+                     option.complementary() && part < option.fields().size();
+                     part++) {
                     int total = fixture.team().get(part)
                             + fixture.opponent().get(part);
 
@@ -333,7 +337,8 @@ public class ScorePreviewService {
                 adapter == null ? 0 : adapter.maximumPerField(),
                 adapter == null ? "" : adapter.inputHint(),
                 adapter == null ? "" : adapter.decisionNote(),
-                unavailable
+                unavailable,
+                adapter != null && adapter.complementary()
         );
     }
 

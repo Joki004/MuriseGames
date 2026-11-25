@@ -26,8 +26,10 @@ class PlayerPointsRulesTest {
                 PlayerPointsRules.segmentsFor("grab_the_cup_v1"));
         assertEquals(List.of("Pair 1", "Pair 2"),
                 PlayerPointsRules.segmentsFor("unified_alibi_v1"));
-        // No reviewed formula yet: credited per match.
-        assertEquals(List.of("Match"), PlayerPointsRules.segmentsFor("social_scenario_v1"));
+        assertEquals(List.of("Round 1", "Round 2"),
+                PlayerPointsRules.segmentsFor("social_scenario_v1"));
+        // A game without a scoring adapter yet is credited per match.
+        assertEquals(List.of("Match"), PlayerPointsRules.segmentsFor("future_game_v1"));
         assertEquals(List.of(), PlayerPointsRules.segmentsFor("unscored_rehearsal_v1"));
         assertEquals(List.of(), PlayerPointsRules.segmentsFor("secret_scene_premiere_v1"));
     }
