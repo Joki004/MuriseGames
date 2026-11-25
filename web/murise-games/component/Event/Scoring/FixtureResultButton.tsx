@@ -7,9 +7,11 @@ import { StarPlayersEditor } from "@/component/Event/PlayerPoints/StarPlayersEdi
 import { DuelTrackerDialog } from "@/component/Event/Duel/DuelTrackerDialog";
 import { ChainTrackerDialog } from "@/component/Event/Chain/ChainTrackerDialog";
 import { GroupChatTrackerDialog } from "@/component/Event/GroupChat/GroupChatTrackerDialog";
+import { PoisonTrackerDialog } from "@/component/Event/Poison/PoisonTrackerDialog";
 import { isDuelGame } from "@/modules/Event/Duel";
 import { isChainGame } from "@/modules/Event/Chain";
 import { isGroupChatGame } from "@/modules/Event/GroupChat";
+import { isPoisonGame } from "@/modules/Event/Poison";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -55,6 +57,24 @@ function loadGames(eventId: string) {
   return cached;
 }
 
+type Tracker = "duel" | "poison" | "chain" | "groupChat";
+
+const TRACKER_LABEL: Record<Tracker, string> = {
+  duel: "▶ Run duels",
+  poison: "▶ Run rounds (gamemaster)",
+  chain: "▶ Run turns",
+  groupChat: "▶ Run rounds",
+};
+
+/** Which live tracker fits this game, if any. */
+function trackerFor(game: ScorePreviewGame, playingTeams: number): Tracker | null {
+  if (playingTeams === 2 && isDuelGame(game)) return "duel";
+  if (playingTeams === 2 && isPoisonGame(game)) return "poison";
+  if (playingTeams === 1 && isChainGame(game)) return "chain";
+  if (playingTeams === 1 && isGroupChatGame(game)) return "groupChat";
+  return null;
+}
+
 type InputMode = "duel" | "split" | "grid";
 
 function inputModeFor(game: ScorePreviewGame, playingTeams: number): InputMode {
@@ -87,7 +107,7 @@ export function FixtureResultButton({
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
   // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
   const [scorable, setScorable] = useState<boolean | null>(null);
-  // Live trackers: Grab the Cup (GM-044), Sensory Chain (GM-045), Group Chat (GM-050).
+  // Live trackers: Grab the Cup (GM-044), Sensory Chain (GM-045), Poison (GM-048), Group Chat (GM-050).
   const [knownGame, setKnownGame] = useState<ScorePreviewGame | null>(null);
   const [trackerOpen, setTrackerOpen] = useState(false);
 
@@ -113,15 +133,7 @@ export function FixtureResultButton({
     };
   }, [eventId, fixture.eventGameId, suppliedGames]);
 
-  const tracker: "duel" | "chain" | "groupChat" | null = !knownGame
-    ? null
-    : isDuelGame(knownGame) && playing.length === 2
-      ? "duel"
-      : isChainGame(knownGame) && playing.length === 1
-        ? "chain"
-        : isGroupChatGame(knownGame) && playing.length === 1
-          ? "groupChat"
-          : null;
+  const tracker = knownGame ? trackerFor(knownGame, playing.length) : null;
 
   if (isBye) return null;
 
@@ -240,11 +252,7 @@ export function FixtureResultButton({
         {completed && <Badge tone="success">Result recorded</Badge>}
         {!completed && tracker && (
           <Button onClick={() => setTrackerOpen(true)}>
-            {tracker === "duel"
-              ? "▶ Run duels"
-              : tracker === "chain"
-                ? "▶ Run turns"
-                : "▶ Run rounds"}
+            {TRACKER_LABEL[tracker]}
           </Button>
         )}
         <Button
@@ -270,6 +278,21 @@ export function FixtureResultButton({
           team={{ teamId: playing[0].teamId, teamName: playing[0].teamName }}
           turnCount={knownGame.fields.length}
           cardsPerTurn={knownGame.maximumPerField}
+          onClose={() => setTrackerOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
+
+      {trackerOpen && knownGame && tracker === "poison" && (
+        <PoisonTrackerDialog
+          eventId={eventId}
+          fixtureId={fixture.fixtureId}
+          title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          teams={[
+            { teamId: playing[0].teamId, teamName: playing[0].teamName },
+            { teamId: playing[1].teamId, teamName: playing[1].teamName },
+          ]}
+          roundCount={knownGame.fields.length}
           onClose={() => setTrackerOpen(false)}
           onSaved={onChanged}
         />
