@@ -17,6 +17,7 @@ import type { EventDetailResponse } from "@/modules/Event/event.type";
 import { formatEventTime } from "@/component/Dashboard/DashboardView";
 import { PictureControl } from "@/component/Picture/PictureControl";
 import { EventEditButton } from "@/component/Event/EventEditDialog";
+import { isLiveScreenRoute } from "@/component/Layout/Navbar";
 
 interface EventContextValue {
   detail: EventDetailResponse;
@@ -59,6 +60,12 @@ function EventProvider({
 
 export function EventShell({ children }: { children: ReactNode }) {
   const { eventId } = useParams<{ eventId: string }>();
+  const pathname = usePathname();
+
+  // TV and player screens fill the device: no event header, tabs or page margins.
+  if (isLiveScreenRoute(pathname)) {
+    return <RequireAccount>{children}</RequireAccount>;
+  }
 
   return (
     <RequireAccount>

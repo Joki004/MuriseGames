@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Dialog, Input, Select } from "@/component/ui";
+import { StarPlayersButton } from "@/component/Event/PlayerPoints/StarPlayersButton";
+import { StarPlayersEditor } from "@/component/Event/PlayerPoints/StarPlayersEditor";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -219,6 +221,13 @@ export function FixtureResultButton({
         >
           {completed ? "Correct result" : "Record result"}
         </Button>
+        {completed && (
+          <StarPlayersButton
+            eventId={eventId}
+            fixtureId={fixture.fixtureId}
+            title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          />
+        )}
       </div>
 
       <Dialog
@@ -247,7 +256,14 @@ export function FixtureResultButton({
                   </li>
                 ))}
               </ul>
-              <Button onClick={() => setOpen(false)}>Done</Button>
+              <div className="space-y-2 border-t border-border pt-4">
+                <p className="text-sm font-semibold">★ Star players</p>
+                <StarPlayersEditor
+                  eventId={eventId}
+                  fixtureId={fixture.fixtureId}
+                  onClose={() => setOpen(false)}
+                />
+              </div>
             </div>
           ) : !game ? (
             !error && <p className="text-sm text-muted">Loading…</p>

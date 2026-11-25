@@ -8,16 +8,12 @@ import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
 import { AlibiPlayerCard } from "@/component/Event/Alibi/Game/AlibiPlayerCard";
 import { TeamResultsCard } from "@/component/Event/Scoring/TeamResultsCard";
 import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
-import { PageShell } from "@/component/Layout/PageShell";
 import { SocialPlayerCard } from "@/component/Event/Social/SocialPlayerCard";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@/component/ui";
+import { StarPlayersCard } from "@/component/Event/PlayerPoints/StarPlayersCard";
+import { MatchupFaces } from "@/component/Event/Roster/MatchupFaces";
+import { RosterAvatar } from "@/component/Event/Roster/RosterAvatar";
+import { TeamIdentity } from "@/component/Event/Roster/TeamIdentity";
+import { Alert, Badge, Button, Card } from "@/component/ui";
 import { extractApiErrorMessage } from "@/modules/Api/api.service";
 import {
   EventGameController,
@@ -25,6 +21,7 @@ import {
 } from "@/modules/Event/EventGame";
 import { EventLiveController, useEventSnapshot } from "@/modules/Event/Live";
 import { ParticipantController } from "@/modules/Event/Participant";
+import { rosterTeamFor, useEventRoster } from "@/modules/Event/Roster";
 import { TeamController, type TeamResponse } from "@/modules/Event/Team";
 import { UserController } from "@/modules/User";
 
@@ -35,12 +32,19 @@ function formatMs(ms: number) {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+/**
+ * Made for phones, in the order a player needs it: a sticky bar with the team
+ * and the clock, then whatever asks for action now (Alibi, Social, guessing),
+ * then the current match, then the team and the scores.
+ */
 export function PlayerScreenView() {
   const { eventId } = useParams<{ eventId: string }>();
   const { snapshot, clockOffsetMs, error, applySnapshot } =
     useEventSnapshot(eventId);
 
   const [myTeam, setMyTeam] = useState<TeamResponse | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [games, setGames] = useState<EventGameResponse[]>([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
@@ -52,14 +56,25 @@ export function PlayerScreenView() {
       ParticipantController.list(eventId),
       TeamController.list(eventId),
       EventGameController.list(eventId),
-    ]).then(([me, participants, teams, eventGames]) => {
-      setGames(eventGames);
-      const mine = participants.find((p) => p.userId === me.id);
-      if (mine?.teamId) {
-        setMyTeam(teams.teams.find((t) => t.id === mine.teamId) ?? null);
-      }
-    });
+    ])
+      .then(([me, participants, teams, eventGames]) => {
+        setGames(eventGames);
+        setMyUserId(me.id);
+        const mine = participants.find((p) => p.userId === me.id);
+        if (mine?.teamId) {
+          setMyTeam(teams.teams.find((t) => t.id === mine.teamId) ?? null);
+        }
+      })
+      .catch(() => {
+        // The live snapshot still works; the team card stays empty.
+      })
+      .finally(() => setLoaded(true));
   }, [eventId]);
+
+  const { roster } = useEventRoster(eventId);
+  const myRosterTeam = myTeam
+    ? rosterTeamFor(roster, myTeam.id, myTeam.name, myTeam.color)
+    : null;
 
   useEffect(() => {
     if (!snapshot?.deadlineAt || snapshot.paused) return;
@@ -96,6 +111,17 @@ export function PlayerScreenView() {
       ? undefined
       : games.find((g) => g.id === snapshot?.currentEventGameId);
 
+  const othersPlaying =
+    myFixtures.length === 0 && (snapshot?.activeFixtures?.length ?? 0) > 0;
+
+  const activityLabel = myPlayingFixture
+    ? myPlayingFixture.gameName
+    : activeGame
+      ? activeGame.name
+      : othersPlaying
+        ? "You're on a break"
+        : "Waiting for the next activity";
+
   const isReady = myTeam
     ? (snapshot?.readyTeamIds ?? []).includes(myTeam.id)
     : false;
@@ -122,137 +148,163 @@ export function PlayerScreenView() {
 
   return (
     <RequireAccount>
-      <PageShell
-        title={myTeam ? myTeam.name : "Player screen"}
-        description="Live game status and team actions."
-        action={
+      <main
+        id="main-content"
+        className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-3 pb-10"
+      >
+        {/* ── Sticky bar: always visible while scrolling ── */}
+        <header className="sticky top-0 z-20 -mx-3 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
           <Link
             href={`/events/${eventId}`}
-            className="ui-button ui-button--secondary"
+            aria-label="Back to the event"
+            className="rounded-control px-2 py-1 text-lg text-muted hover:text-foreground"
           >
-            Event home
+            ←
           </Link>
-        }
-      >
+          {myRosterTeam && (
+            <RosterAvatar
+              picture={myRosterTeam.picture}
+              label={myRosterTeam.name}
+              kind="team"
+              size="sm"
+              color={myRosterTeam.color}
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">
+              {myRosterTeam?.name ?? "Player screen"}
+            </p>
+            <p className="truncate text-xs text-muted">{activityLabel}</p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end">
+            <p
+              className={[
+                "font-mono text-2xl font-bold tabular-nums leading-none",
+                remainingMs === 0 && !snapshot?.paused ? "text-danger" : "",
+              ].join(" ")}
+              aria-label="Time left"
+            >
+              {remainingMs != null ? formatMs(remainingMs) : "--:--"}
+            </p>
+            {snapshot?.paused && (
+              <Badge tone="warning" className="mt-1">
+                Paused
+              </Badge>
+            )}
+          </div>
+        </header>
+
         {(error || actionError) && (
           <Alert tone="error">{actionError ?? error}</Alert>
         )}
 
-        {/* Only shows when this player is in an Alibi pair. */}
+        {/* ── Needs you now: these only appear when this player has something to do ── */}
         <AlibiPlayerCard eventId={eventId} />
         <SocialPlayerCard eventId={eventId} />
-
-        <Card className="space-y-5 text-center">
-          <div className="flex justify-center gap-2">
-            <Badge tone={snapshot?.paused ? "warning" : "accent"}>
-              {snapshot?.paused ? "Paused" : (snapshot?.phase ?? "lobby")}
-            </Badge>
-            {activeGame && <Badge>{activeGame.name}</Badge>}
-          </div>
-
-          <p className="font-mono text-6xl font-bold tracking-tight">
-            {remainingMs != null ? formatMs(remainingMs) : "--:--"}
-          </p>
-
-          {myTeam && myFixtures.length > 0 && (
-            <div className="mx-auto max-w-md space-y-2 rounded-[var(--ui-radius-control)] border border-border bg-background/60 p-3 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Your Matchup
-              </p>
-              {myFixtures.map((f) => {
-                const isBye = f.teams.some((t) => t.side === "bye");
-                const opponents = f.teams.filter(
-                  (t) => t.teamId !== myTeam.id && t.side !== "bye",
-                );
-                return (
-                  <div key={f.fixtureId} className="space-y-0.5">
-                    <p className="text-xs font-semibold text-accent">
-                      {isBye ? "Resting / Bye" : f.gameName}
-                    </p>
-                    <p className="text-base font-bold">
-                      {isBye
-                        ? "Bye this round (rest up — you're next!)"
-                        : opponents.length > 0
-                          ? `vs ${opponents.map((o) => o.teamName).join(" & ")}`
-                          : "Solo / All-team station"}
-                    </p>
-                    <p className="text-xs text-muted">
-                      Round {f.roundNumber}
-                      {f.resourceName ? ` · ${f.resourceName}` : ""}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {myTeam &&
-            myFixtures.length === 0 &&
-            (snapshot?.activeFixtures?.length ?? 0) > 0 && (
-              <div className="mx-auto max-w-md rounded-[var(--ui-radius-control)] border border-border bg-background/60 p-3 text-sm">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Short Break
-                </p>
-                <p className="mt-1 text-base font-bold">
-                  You&apos;re resting this round — up next!
-                </p>
-              </div>
-            )}
-
-          {activeGame?.code && (
-            <div>
-              <Link
-                href={`/games/${encodeURIComponent(activeGame.code)}`}
-                className="ui-button ui-button--secondary"
-              >
-                Read {activeGame.name} rules
-              </Link>
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Team action</CardTitle>
-          </CardHeader>
-
-          {myTeam ? (
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-sm text-muted">
-                Status:{" "}
-                <strong>{isReady ? "Ready for host" : "Not ready yet"}</strong>
-              </p>
-              <Button
-                className="w-full py-4 text-lg"
-                variant={isReady ? "secondary" : "primary"}
-                disabled={busy}
-                onClick={() => void toggleReady()}
-              >
-                {busy
-                  ? "Updating…"
-                  : isReady
-                    ? "Mark team not ready"
-                    : "Mark team ready"}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-sm text-muted">
-              You are not assigned to a team yet. Ask the organizer to place you
-              on a team.
-            </p>
-          )}
-        </Card>
-
-        <TeamResultsCard eventId={eventId} snapshotVersion={snapshot?.version} />
-
-        <RevealBoard eventId={eventId} />
-
         <SecretSceneGuessPanel
           eventId={eventId}
           snapshotVersion={snapshot?.version}
           guessingVersion={snapshot?.guessingVersion}
         />
-      </PageShell>
+
+        {/* ── Your current match ── */}
+        <Card className="space-y-4">
+          {!myTeam ? (
+            <p className="text-sm text-muted">
+              {loaded
+                ? "You are not in a team yet. Ask the organizer to place you in one."
+                : "Loading…"}
+            </p>
+          ) : myFixtures.length > 0 ? (
+            myFixtures.map((f) => {
+              const isBye = f.teams.some((t) => t.side === "bye");
+              const opponents = f.teams.filter(
+                (t) => t.teamId !== myTeam.id && t.side !== "bye",
+              );
+              return (
+                <div key={f.fixtureId} className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge tone="accent">{isBye ? "Bye" : f.gameName}</Badge>
+                    <span className="text-xs text-muted">
+                      Round {f.roundNumber}
+                      {f.resourceName ? ` · ${f.resourceName}` : ""}
+                    </span>
+                  </div>
+                  {isBye ? (
+                    <p className="text-lg font-bold">
+                      Bye this round. Rest up, you&apos;re next!
+                    </p>
+                  ) : opponents.length > 0 ? (
+                    <MatchupFaces
+                      roster={roster}
+                      teams={f.teams}
+                      size="sm"
+                      members="faces"
+                      highlightUserId={myUserId}
+                    />
+                  ) : (
+                    <p className="text-lg font-bold">Your team plays alone at this station.</p>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-lg font-semibold">
+              {othersPlaying
+                ? "You're on a break. Up next!"
+                : "Waiting for the next activity."}
+            </p>
+          )}
+
+          {activeGame?.code && (
+            <Link
+              href={`/games/${encodeURIComponent(activeGame.code)}`}
+              className="ui-button ui-button--secondary w-full"
+            >
+              {activeGame.name} rules
+            </Link>
+          )}
+
+          {myTeam && (
+            <Button
+              className="w-full py-4 text-lg"
+              variant={isReady ? "secondary" : "primary"}
+              disabled={busy}
+              onClick={() => void toggleReady()}
+            >
+              {busy
+                ? "Updating…"
+                : isReady
+                  ? "✓ Team ready (tap to undo)"
+                  : "Mark team ready"}
+            </Button>
+          )}
+        </Card>
+
+        <RevealBoard eventId={eventId} />
+
+        {/* ── Your team and the scores ── */}
+        {myRosterTeam && (
+          <Card className="flex justify-center py-5">
+            <TeamIdentity
+              team={myRosterTeam}
+              size="md"
+              members="names"
+              align="center"
+              highlightUserId={myUserId}
+            />
+          </Card>
+        )}
+
+        <TeamResultsCard eventId={eventId} snapshotVersion={snapshot?.version} />
+
+        <StarPlayersCard
+          eventId={eventId}
+          refreshKey={`${snapshot?.version ?? 0}:${snapshot?.scoreboardVisibility ?? ""}`}
+          roster={roster}
+          size="phone"
+        />
+      </main>
     </RequireAccount>
   );
 }

@@ -35,8 +35,18 @@ export function Navbar() {
   );
 }
 
+/**
+ * Live screens fill the device: the TV on a big screen, the player screen on a
+ * phone. They bring their own compact header instead of the site navigation.
+ */
+export function isLiveScreenRoute(pathname: string) {
+  return /^\/events\/[^/]+\/(tv|play)\/?$/.test(pathname);
+}
+
 function RouteNavbar() {
   const pathname = usePathname();
+
+  if (isLiveScreenRoute(pathname)) return null;
 
   // A route change closes the mobile menu by resetting its local state.
   return <Navigation key={pathname} pathname={pathname} />;
