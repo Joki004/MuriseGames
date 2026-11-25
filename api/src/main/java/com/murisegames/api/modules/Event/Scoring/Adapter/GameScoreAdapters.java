@@ -18,8 +18,27 @@ public final class GameScoreAdapters {
             int maximumPerField,
             String inputHint,
             String decisionNote,
-            Map<String, Integer> requiredConfig
+            Map<String, Integer> requiredConfig,
+            /**
+             * Head-to-head games whose two teams' values per field always total
+             * maximumPerField (a duel won by one side). Social Scenario is
+             * head-to-head but both teams score independently.
+             */
+            boolean complementary
     ) {
+        public Definition(
+                String handler,
+                boolean headToHead,
+                List<String> fields,
+                int maximumPerField,
+                String inputHint,
+                String decisionNote,
+                Map<String, Integer> requiredConfig
+        ) {
+            this(handler, headToHead, fields, maximumPerField, inputHint,
+                    decisionNote, requiredConfig, headToHead);
+        }
+
         public int maximumPerFixture() {
             return fields.size() * maximumPerField;
         }
@@ -54,6 +73,26 @@ public final class GameScoreAdapters {
     }
 
     private static final Map<String, Definition> DEFINITIONS = Map.of(
+            "social_scenario_v1",
+            new Definition(
+                    "social_scenario_v1",
+                    true,
+                    List.of("Round 1", "Round 2"),
+                    6,
+                    "Enter each team's points per round. As defender: +1 per "
+                            + "goal, +1 more if all 3 goals with no red flag. "
+                            + "As attacker: +2 for a red flag. 0 to 6 per round.",
+                    "Decided 25 Nov 2026: 180 s turns, 2 rounds (no 3rd), "
+                            + "red flag beats a simultaneous goal, timeout keeps "
+                            + "goals without bonus; points = 5 × raw ÷ 12.",
+                    Map.of(
+                            "goals", 3,
+                            "red_flags", 2,
+                            "max_normalized", 5
+                    ),
+                    false
+            ),
+
             "grab_the_cup_v1",
             new Definition(
                     "grab_the_cup_v1",
@@ -113,8 +152,9 @@ public final class GameScoreAdapters {
                     List.of("Round 1", "Round 2"),
                     1,
                     "Enter 1 for a round won and 0 for a round lost.",
-                    "Timeout and exposed-marker handling need approval "
-                            + "before official results are accepted.",
+                    "Decided 25 Nov 2026: 6 cups; no choice within 5 s and the "
+                            + "host picks a random remaining cup; an exposed "
+                            + "marker means reshuffle and replay the round.",
                     Map.of(
                             "rounds", 2,
                             "max_normalized", 5
@@ -139,8 +179,8 @@ public final class GameScoreAdapters {
                     "Enter catches when this team hunts, or survivors "
                             + "when this team runs. Opposing scores in "
                             + "the same turn must total 3.",
-                    "The physical layout and 24-point fixture maximum "
-                            + "still require the recorded Grid decision.",
+                    "Decided 25 Nov 2026: one shared 3×3 grid; 24-point "
+                            + "fixture maximum approved.",
                     Map.of(
                             "rounds", 4,
                             "max_raw", 24,
@@ -156,8 +196,8 @@ public final class GameScoreAdapters {
                     1,
                     "Enter 1 when the situation was guessed correctly "
                             + "and 0 otherwise.",
-                    "This previews the secret-situation guessing variant. "
-                            + "It does not implement the alternative voting variant.",
+                    "Decided 25 Nov 2026: the secret-situation version "
+                            + "(slide 12), not the voting variant.",
                     Map.of(
                             "rounds", 4,
                             "max_raw", 4,
@@ -172,9 +212,6 @@ public final class GameScoreAdapters {
 
     public static String unavailableReason(String handler) {
         return switch (handler) {
-            case "social_scenario_v1" ->
-                    "Social scoring is waiting for the approved formula. "
-                            + "No score will be calculated.";
             case "unscored_rehearsal_v1" ->
                     "Rehearsal is unscored and does not increase "
                             + "the game-points maximum.";

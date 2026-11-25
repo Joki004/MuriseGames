@@ -52,7 +52,8 @@ function loadGames(eventId: string) {
 type InputMode = "duel" | "split" | "grid";
 
 function inputModeFor(game: ScorePreviewGame, playingTeams: number): InputMode {
-  if (game.headToHead && playingTeams === 2) {
+  // Social Scenario is head-to-head, but each team scores on its own: grid.
+  if (game.headToHead && game.complementary && playingTeams === 2) {
     return game.maximumPerField === 1 ? "duel" : "split";
   }
   return "grid";

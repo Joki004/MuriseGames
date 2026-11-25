@@ -16,6 +16,8 @@ export interface ScorePreviewGame {
   inputHint: string;
   decisionNote: string;
   unavailableReason: string | null;
+  /** Head-to-head values per field always total maximumPerField (a duel). */
+  complementary: boolean;
 }
 
 export interface PreviewFixtureInput {
