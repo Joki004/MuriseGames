@@ -6,8 +6,10 @@ import { StarPlayersButton } from "@/component/Event/PlayerPoints/StarPlayersBut
 import { StarPlayersEditor } from "@/component/Event/PlayerPoints/StarPlayersEditor";
 import { DuelTrackerDialog } from "@/component/Event/Duel/DuelTrackerDialog";
 import { ChainTrackerDialog } from "@/component/Event/Chain/ChainTrackerDialog";
+import { GroupChatTrackerDialog } from "@/component/Event/GroupChat/GroupChatTrackerDialog";
 import { isDuelGame } from "@/modules/Event/Duel";
 import { isChainGame } from "@/modules/Event/Chain";
+import { isGroupChatGame } from "@/modules/Event/GroupChat";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -85,7 +87,7 @@ export function FixtureResultButton({
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
   // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
   const [scorable, setScorable] = useState<boolean | null>(null);
-  // Live trackers: Grab the Cup duels (GM-044), Sensory Chain turns (GM-045).
+  // Live trackers: Grab the Cup (GM-044), Sensory Chain (GM-045), Group Chat (GM-050).
   const [knownGame, setKnownGame] = useState<ScorePreviewGame | null>(null);
   const [trackerOpen, setTrackerOpen] = useState(false);
 
@@ -111,13 +113,15 @@ export function FixtureResultButton({
     };
   }, [eventId, fixture.eventGameId, suppliedGames]);
 
-  const tracker: "duel" | "chain" | null = !knownGame
+  const tracker: "duel" | "chain" | "groupChat" | null = !knownGame
     ? null
     : isDuelGame(knownGame) && playing.length === 2
       ? "duel"
       : isChainGame(knownGame) && playing.length === 1
         ? "chain"
-        : null;
+        : isGroupChatGame(knownGame) && playing.length === 1
+          ? "groupChat"
+          : null;
 
   if (isBye) return null;
 
@@ -236,7 +240,11 @@ export function FixtureResultButton({
         {completed && <Badge tone="success">Result recorded</Badge>}
         {!completed && tracker && (
           <Button onClick={() => setTrackerOpen(true)}>
-            {tracker === "duel" ? "▶ Run duels" : "▶ Run turns"}
+            {tracker === "duel"
+              ? "▶ Run duels"
+              : tracker === "chain"
+                ? "▶ Run turns"
+                : "▶ Run rounds"}
           </Button>
         )}
         <Button
@@ -262,6 +270,18 @@ export function FixtureResultButton({
           team={{ teamId: playing[0].teamId, teamName: playing[0].teamName }}
           turnCount={knownGame.fields.length}
           cardsPerTurn={knownGame.maximumPerField}
+          onClose={() => setTrackerOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
+
+      {trackerOpen && knownGame && tracker === "groupChat" && (
+        <GroupChatTrackerDialog
+          eventId={eventId}
+          fixtureId={fixture.fixtureId}
+          title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          team={{ teamId: playing[0].teamId, teamName: playing[0].teamName }}
+          roundCount={knownGame.fields.length}
           onClose={() => setTrackerOpen(false)}
           onSaved={onChanged}
         />
