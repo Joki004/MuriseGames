@@ -15,6 +15,13 @@ import {
   useAlibiLive,
 } from "@/component/Event/Alibi/Game/AlibiTvCard";
 import { MatchupFaces } from "@/component/Event/Roster/MatchupFaces";
+import {
+  NowPerformingHero,
+  PREMIERE_GAME_CODE,
+  PerformanceOrderList,
+  REHEARSAL_GAME_CODE,
+  performanceStatus,
+} from "@/component/Event/Finale/PerformanceOrder";
 import { StarPlayersCard } from "@/component/Event/PlayerPoints/StarPlayersCard";
 import { RosterAvatar } from "@/component/Event/Roster/RosterAvatar";
 import {
@@ -152,10 +159,13 @@ export function TvScreenView() {
   );
   const distinctGames = Array.from(new Set(playingFixtures.map((f) => f.gameName)));
 
+  const activityCode = preview ? preview.activityCode : (activeGame?.code ?? null);
+  const activityName = preview ? preview.activityName : (activeGame?.name ?? null);
+
   const activityLabel =
     distinctGames.length > 1
       ? `${distinctGames.length} games at the same time`
-      : (activeGame?.name ?? distinctGames[0] ?? "Waiting for the next activity");
+      : (activityName ?? distinctGames[0] ?? "Waiting for the next activity");
 
   const restingTeams = (() => {
     if (activeFixtures.length === 0 || !roster) return [];
@@ -174,6 +184,17 @@ export function TvScreenView() {
     alibi.round !== null && (alibiSlotActive || isAlibiOnStage(alibi.round));
   const finaleOnStage =
     !alibiOnStage && playingFixtures.length === 0 && isFinaleOnStage(reveals);
+  // Rehearsal and premiere are all-teams activities: one fixture with every team.
+  const runningCodes = new Set(playingFixtures.map((f) => f.gameCode));
+  const rehearsalOnStage =
+    !alibiOnStage &&
+    (runningCodes.has(REHEARSAL_GAME_CODE) ||
+      (playingFixtures.length === 0 && activityCode === REHEARSAL_GAME_CODE));
+  const premiereOnStage =
+    !alibiOnStage &&
+    !rehearsalOnStage &&
+    (runningCodes.has(PREMIERE_GAME_CODE) || activityCode === PREMIERE_GAME_CODE);
+  const performance = performanceStatus(roster, reveals);
   const showClues =
     !finaleOnStage &&
     releasedClues !== null &&
@@ -238,6 +259,29 @@ export function TvScreenView() {
                   <MatchupGrid fixtures={otherFixtures} roster={roster} compact />
                 )}
               </>
+            ) : rehearsalOnStage ? (
+              <Card className="flex flex-1 flex-col gap-6 p-6 xl:p-8">
+                <div>
+                  <h2 className="text-3xl font-bold">🎭 Final rehearsal</h2>
+                  <p className="text-lg text-muted">
+                    Rehearse your registered scene, check props and roles, and be ready to
+                    set up in under a minute.
+                  </p>
+                </div>
+                <h3 className="text-xl font-semibold">Performance order</h3>
+                <PerformanceOrderList status={performance} variant="tv" />
+              </Card>
+            ) : finaleOnStage || premiereOnStage ? (
+              <div className="space-y-4 xl:space-y-6">
+                <NowPerformingHero status={performance} />
+                <RevealBoardView data={reveals} variant="tv" />
+                {performance.performed.size === 0 && (
+                  <Card className="space-y-4 p-6">
+                    <h2 className="text-2xl font-bold">Performance order</h2>
+                    <PerformanceOrderList status={performance} variant="tv" />
+                  </Card>
+                )}
+              </div>
             ) : playingFixtures.length > 0 ? (
               <>
                 <MatchupGrid fixtures={playingFixtures} roster={roster} />
@@ -250,10 +294,6 @@ export function TvScreenView() {
                   </p>
                 )}
               </>
-            ) : finaleOnStage ? (
-              <div>
-                <RevealBoardView data={reveals} variant="tv" />
-              </div>
             ) : (
               <TeamsLobby roster={roster} />
             )}

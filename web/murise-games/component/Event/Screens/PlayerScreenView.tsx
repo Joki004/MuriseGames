@@ -4,7 +4,17 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { RequireAccount } from "@/component/Auth/RequireAccount";
-import { RevealBoard } from "@/component/Event/Finale/RevealBoard";
+import {
+  RevealBoardView,
+  isFinaleOnStage,
+  useRevealBoard,
+} from "@/component/Event/Finale/RevealBoard";
+import {
+  PREMIERE_GAME_CODE,
+  PerformanceOrderCard,
+  REHEARSAL_GAME_CODE,
+  performanceStatus,
+} from "@/component/Event/Finale/PerformanceOrder";
 import { AlibiPlayerCard } from "@/component/Event/Alibi/Game/AlibiPlayerCard";
 import { TeamResultsCard } from "@/component/Event/Scoring/TeamResultsCard";
 import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
@@ -72,6 +82,7 @@ export function PlayerScreenView() {
   }, [eventId]);
 
   const { roster } = useEventRoster(eventId);
+  const reveals = useRevealBoard(eventId);
   const myRosterTeam = myTeam
     ? rosterTeamFor(roster, myTeam.id, myTeam.name, myTeam.color)
     : null;
@@ -110,6 +121,11 @@ export function PlayerScreenView() {
     : snapshot?.currentWindowStartAt
       ? undefined
       : games.find((g) => g.id === snapshot?.currentEventGameId);
+
+  const rehearsalNow = activeGame?.code === REHEARSAL_GAME_CODE;
+  const premiereNow =
+    activeGame?.code === PREMIERE_GAME_CODE ||
+    (isFinaleOnStage(reveals) && (snapshot?.activeFixtures?.length ?? 0) === 0);
 
   const othersPlaying =
     myFixtures.length === 0 && (snapshot?.activeFixtures?.length ?? 0) > 0;
@@ -234,6 +250,10 @@ export function PlayerScreenView() {
                     <p className="text-lg font-bold">
                       Bye this round. Rest up, you&apos;re next!
                     </p>
+                  ) : f.gameCode === REHEARSAL_GAME_CODE || f.gameCode === PREMIERE_GAME_CODE ? (
+                    <p className="text-lg font-bold">
+                      All teams together: see the running order below.
+                    </p>
                   ) : opponents.length > 0 ? (
                     <MatchupFaces
                       roster={roster}
@@ -281,7 +301,15 @@ export function PlayerScreenView() {
           )}
         </Card>
 
-        <RevealBoard eventId={eventId} />
+        {(rehearsalNow || premiereNow) && (
+          <PerformanceOrderCard
+            status={performanceStatus(roster, reveals)}
+            myTeamId={myTeam?.id ?? null}
+            rehearsal={rehearsalNow && !premiereNow}
+          />
+        )}
+
+        <RevealBoardView data={reveals} />
 
         {/* ── Your team and the scores ── */}
         {myRosterTeam && (
