@@ -1,76 +1,88 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Badge, Card, CardHeader, CardTitle, Input } from "@/component/ui";
+import { Badge, Card, CardHeader, CardTitle } from "@/component/ui";
 import { SocialCaseService, type SocialRoleCardView } from "@/modules/Event/Social";
 
 interface SocialPlayerCardProps {
   eventId: string;
-  initialRoundNumber?: number;
+  /** The Social rounds to look in (2 rounds, decided 25 Nov 2026). */
+  rounds?: number[];
 }
 
+/** Role cards are assigned by the host during the game: check regularly. */
+const REFRESH_MS = 10_000;
+
+const DEFAULT_ROUNDS = [1, 2];
+
+function hasRole(card: SocialRoleCardView | null): card is SocialRoleCardView {
+  return card !== null && card.role !== "AUDIENCE" && card.caseId !== null;
+}
+
+/**
+ * The player's private Social Scenario card. Shows only when this player has a
+ * role (the latest round they play in) and appears on its own once the host
+ * assigns it; everyone else never sees this card.
+ */
 export function SocialPlayerCard({
   eventId,
-  initialRoundNumber = 1,
+  rounds = DEFAULT_ROUNDS,
 }: SocialPlayerCardProps) {
-  const [roundNumber, setRoundNumber] = useState(initialRoundNumber);
-  const [card, setCard] = useState<SocialRoleCardView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [cards, setCards] = useState<(SocialRoleCardView | null)[]>([]);
+  const [tick, setTick] = useState(0);
+  const roundsKey = rounds.join(",");
 
   useEffect(() => {
     let cancelled = false;
-    SocialCaseService.myRoleCard(eventId, roundNumber)
-      .then((res) => {
-        if (!cancelled) {
-          setError(null);
-          setCard(res.data ?? null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load role card.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const wanted = roundsKey.split(",").map(Number);
+    void Promise.all(
+      wanted.map((round) =>
+        SocialCaseService.myRoleCard(eventId, round)
+          .then((res) => res.data ?? null)
+          .catch(() => undefined),
+      ),
+    ).then((loaded) => {
+      if (cancelled) return;
+      // A failed request keeps what was shown before (no flicker on a bad connection).
+      setCards((previous) =>
+        loaded.map((card, index) => (card === undefined ? (previous[index] ?? null) : card)),
+      );
+    });
     return () => {
       cancelled = true;
     };
-  }, [eventId, roundNumber]);
+  }, [eventId, roundsKey, tick]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") setTick((n) => n + 1);
+    }, REFRESH_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  let roundIndex = -1;
+  cards.forEach((card, index) => {
+    if (hasRole(card)) roundIndex = index;
+  });
+
+  if (roundIndex < 0) return null;
+
+  const card = cards[roundIndex] as SocialRoleCardView;
+  const roundNumber = rounds[roundIndex];
 
   return (
-    <Card className="space-y-4">
+    <Card className="space-y-4 border-accent">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <div>
-          <CardTitle>Social Scenario Role Card</CardTitle>
+          <CardTitle>Social Scenario · Round {roundNumber}</CardTitle>
           <p className="text-sm text-muted">
-            Private briefing scoped strictly to your active round role.
+            Private: don&apos;t show this card to anyone.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Input
-            id="social-round"
-            label="Round"
-            type="number"
-            min={1}
-            className="w-24"
-            value={roundNumber}
-            onChange={(e) => {
-              setLoading(true);
-              setRoundNumber(Math.max(1, Number(e.target.value) || 1));
-            }}
-          />
-          {card && <Badge>{card.role}</Badge>}
-        </div>
+        <Badge tone="accent">{card.role}</Badge>
       </CardHeader>
 
-      {loading && <p className="text-sm text-muted">Loading role card…</p>}
-      {error && <Alert tone="error">{error}</Alert>}
-
-      {!loading && card && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {card.label && (
             <div className="flex items-center justify-between text-xs text-muted">
               <span className="font-semibold text-foreground">{card.label}</span>
@@ -156,8 +168,7 @@ export function SocialPlayerCard({
               )}
             </div>
           )}
-        </div>
-      )}
+      </div>
     </Card>
   );
 }
