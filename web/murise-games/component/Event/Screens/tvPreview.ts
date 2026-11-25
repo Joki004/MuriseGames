@@ -17,6 +17,7 @@ import type { ScoreboardResponse } from "@/modules/Event/Scoring";
  */
 export const TV_PREVIEW_STATES = [
   { id: "lobby", label: "Teams" },
+  { id: "rehearsal", label: "Rehearsal" },
   { id: "match", label: "1 match" },
   { id: "matches", label: "2 matches" },
   { id: "alibi-prep", label: "Alibi prep" },
@@ -37,6 +38,8 @@ export function parseTvPreview(value: string | null): TvPreviewState | null {
 export interface TvPreviewData {
   roster: EventRosterResponse;
   phase: string;
+  activityCode: string | null;
+  activityName: string | null;
   deadlineAt: number | null;
   fixtures: ActiveFixtureView[];
   alibi: AlibiLive;
@@ -145,7 +148,7 @@ export function buildTvPreview(
   const alibiFixture = fixture("alibi", "Unified Alibi", "unified-alibi", 2, [third], "Kitchen", startedAt);
 
   const fixtures: ActiveFixtureView[] =
-    state === "lobby" || state === "finale"
+    state === "lobby" || state === "finale" || state === "rehearsal"
       ? []
       : state === "match" || state === "hidden"
         ? [grab]
@@ -218,7 +221,8 @@ export function buildTvPreview(
     state === "finale"
       ? {
           guessingStatus: "closed",
-          reveals: roster.teams.map((t, i) => {
+          // The last team is still to come, so "Now performing" and "Up next" both show.
+          reveals: roster.teams.slice(0, Math.max(1, roster.teams.length - 1)).map((t, i) => {
             const guesser = roster.teams[(i + 1) % roster.teams.length];
             return {
               sceneId: `preview-scene-${i}`,
@@ -227,7 +231,7 @@ export function buildTvPreview(
               teamColor: t.color,
               title: ["Romeo and Juliet", "The Lord of the Rings", "Singin' in the Rain"][i % 3],
               answerScope: null,
-              revealedAt: new Date(startedAt).toISOString(),
+              revealedAt: new Date(startedAt + i * 60_000).toISOString(),
               correctGuessers: [
                 { teamId: guesser.teamId, teamName: guesser.name, teamColor: guesser.color, stage: 1, points: 3 },
               ],
@@ -275,9 +279,23 @@ export function buildTvPreview(
   return {
     roster,
     phase: state === "lobby" || state === "finale" ? "lobby" : "active_round",
+    activityCode:
+      state === "rehearsal"
+        ? "final-rehearsal"
+        : state === "finale"
+          ? "secret-scene-premiere"
+          : null,
+    activityName:
+      state === "rehearsal"
+        ? "Final Rehearsal"
+        : state === "finale"
+          ? "Secret Scene Premiere"
+          : null,
     deadlineAt:
       state === "lobby" || state === "finale"
         ? null
+        : state === "rehearsal"
+          ? minutes(20)
         : state === "alibi-prep"
           ? minutes(19)
           : minutes(12),
