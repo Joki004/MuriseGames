@@ -120,7 +120,10 @@ function EventHeader() {
         ]
       : []),
     ...(canManage || roles.includes("CASE_WRITER")
-      ? [{ href: `${base}/alibi`, label: "Alibi cases" }]
+      ? [
+          { href: `${base}/alibi`, label: "Alibi cases" },
+          { href: `${base}/social`, label: "Social cases" },
+        ]
       : []),
     ...(canManage || roles.includes("REFEREE")
       ? [{ href: `${base}/alibi-game`, label: "Alibi game" }]
