@@ -34,6 +34,12 @@ import {
 } from "@/modules/Event/PlayerPoints";
 import { ScoringController } from "@/modules/Event/Scoring";
 
+
+/** Wall-clock time, read only in event handlers and timers (never while rendering). */
+function currentTime() {
+  return Date.now();
+}
+
 interface PoisonTrackerDialogProps {
   eventId: string;
   fixtureId: string;
@@ -63,7 +69,7 @@ export function PoisonTrackerDialog({
   const [players, setPlayers] = useState<Record<Side, FixturePlayer[]>>({ A: [], B: [] });
   const [match, setMatch] = useState<PoisonMatchState | null>(null);
   const [selectedCup, setSelectedCup] = useState<{ cup: number; random: boolean } | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(currentTime);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -100,7 +106,7 @@ export function PoisonTrackerDialog({
     if (turnEndsAt === null) return;
     let buzzed = false;
     const id = setInterval(() => {
-      const tick = Date.now();
+      const tick = currentTime();
       setNow(tick);
       if (!buzzed && tick >= turnEndsAt) {
         buzzed = true;
@@ -112,7 +118,7 @@ export function PoisonTrackerDialog({
 
   function update(change: (current: PoisonMatchState, at: number) => PoisonMatchState) {
     if (!match) return;
-    const at = Date.now();
+    const at = currentTime();
     const next = change(match, at);
     storePoisonMatch(next);
     setNow(at);

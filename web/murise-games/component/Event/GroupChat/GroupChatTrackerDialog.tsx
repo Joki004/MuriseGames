@@ -29,6 +29,12 @@ import {
 } from "@/modules/Event/PlayerPoints";
 import { ScoringController } from "@/modules/Event/Scoring";
 
+
+/** Wall-clock time, read only in event handlers and timers (never while rendering). */
+function currentTime() {
+  return Date.now();
+}
+
 interface GroupChatTrackerDialogProps {
   eventId: string;
   fixtureId: string;
@@ -62,7 +68,7 @@ export function GroupChatTrackerDialog({
 }: GroupChatTrackerDialogProps) {
   const [players, setPlayers] = useState<FixturePlayer[]>([]);
   const [match, setMatch] = useState<ChatMatchState | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(currentTime);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -92,7 +98,7 @@ export function GroupChatTrackerDialog({
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
-      const tick = Date.now();
+      const tick = currentTime();
       setNow(tick);
       setMatch((current) => {
         if (!current) return current;
@@ -110,7 +116,7 @@ export function GroupChatTrackerDialog({
 
   function update(change: (current: ChatMatchState, at: number) => ChatMatchState) {
     if (!match) return;
-    const at = Date.now();
+    const at = currentTime();
     const next = change(match, at);
     storeChatMatch(next);
     setNow(at);
