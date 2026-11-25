@@ -13,12 +13,14 @@ import {
 
 const POLL_MS = 2000;
 
-/**
- * The room's view of the Alibi round: the brief, the current question and who has
- * locked, then each question with both answers once an organizer reveals it.
- * Never shows fixed facts, accepted answers or unrevealed answers.
- */
-export function AlibiTvCard({ eventId }: { eventId: string }) {
+export interface AlibiLive {
+  round: AlibiPublicRound | null;
+  now: number;
+  offsetMs: number;
+}
+
+/** Polls the public Alibi round. Call it once per screen and pass the result down. */
+export function useAlibiLive(eventId: string): AlibiLive {
   const load = useCallback(() => AlibiGameController.live(eventId), [eventId]);
   const { data, offsetMs } = useAlibiPoll(load, POLL_MS);
   const round = data?.round ?? null;
@@ -26,7 +28,60 @@ export function AlibiTvCard({ eventId }: { eventId: string }) {
   const ticking = round?.status === "preparing" || round?.status === "questioning";
   const now = useNow(ticking);
 
+  return { round, now, offsetMs };
+}
+
+/** True while the room should watch the Alibi round (not once it is finished). */
+export function isAlibiOnStage(round: AlibiPublicRound | null) {
+  return round !== null && round.status !== "done";
+}
+
+/**
+ * The room's view of the Alibi round: the brief, the current question and who has
+ * locked, then each question with both answers once an organizer reveals it.
+ * Never shows fixed facts, accepted answers or unrevealed answers.
+ */
+export function AlibiTvCard({ eventId }: { eventId: string }) {
+  const live = useAlibiLive(eventId);
+  return <AlibiTvPanel live={live} />;
+}
+
+/** Compact: the header and the score only, for a finished round on a busy screen. */
+export function AlibiTvPanel({
+  live,
+  compact = false,
+}: {
+  live: AlibiLive;
+  compact?: boolean;
+}) {
+  const { round, now, offsetMs } = live;
+
   if (!round) return null;
+
+  if (compact) {
+    return (
+      <Card className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="h-4 w-4 rounded-full"
+            style={{ backgroundColor: round.teamColor || "var(--accent)" }}
+          />
+          <p className="text-lg">
+            <span className="text-muted">🕵️ Alibi · Pair {round.pairNumber} · </span>
+            <span className="font-bold">{round.teamName}</span>
+            <span className="text-muted">
+              {" "}
+              ({round.playerAName} &amp; {round.playerBName})
+            </span>
+          </p>
+        </div>
+        <p className="text-2xl font-bold">
+          {round.matches} / {round.questionCount} matches
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="space-y-6 p-8">
@@ -86,17 +141,17 @@ export function AlibiTvCard({ eventId }: { eventId: string }) {
               {round.revealed.map((item) => (
                 <li
                   key={item.number}
-                  className="rounded-[var(--ui-radius-card)] border border-border bg-background/60 p-4"
+                  className="rounded-[var(--ui-radius-card)] border border-border bg-background/60 px-4 py-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-lg font-semibold">
                       {item.number}. {item.question}
                     </p>
-                    <span className="text-3xl" aria-label={item.match ? "Match" : "No match"}>
+                    <span className="text-2xl" aria-label={item.match ? "Match" : "No match"}>
                       {item.match ? "✅" : "❌"}
                     </span>
                   </div>
-                  <p className="mt-2 text-lg">
+                  <p className="mt-1 text-lg">
                     <span className="text-muted">{round.playerAName}:</span> {item.answerA}
                   </p>
                   <p className="text-lg">
@@ -139,6 +194,9 @@ function StatusBadge({
   }
   if (round.status === "judging") {
     return <Badge tone="accent">Revealing</Badge>;
+  }
+  if (round.status === "setup") {
+    return <Badge>Getting ready</Badge>;
   }
   return <Badge tone="success">Finished</Badge>;
 }

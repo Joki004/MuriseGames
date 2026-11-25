@@ -12,6 +12,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -92,6 +94,54 @@ public class SupabasePictureStorage {
         }
     }
 
+    /**
+     * Signs several stored pictures in one storage call. Paths the storage could
+     * not sign are left out, so callers fall back to the emoji or initials.
+     */
+    public Map<String, String> signedUrls(Collection<String> paths, int expiresInSeconds) {
+        List<String> requested = paths.stream().distinct().toList();
+        requested.forEach(this::validatePath);
+
+        if (requested.isEmpty()) {
+            return Map.of();
+        }
+
+        try {
+            SignedBatchItem[] items = client.post()
+                    .uri("/object/sign/{bucket}", BUCKET)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("expiresIn", expiresInSeconds, "paths", requested))
+                    .retrieve()
+                    .body(SignedBatchItem[].class);
+
+            Map<String, String> signed = new HashMap<>();
+
+            if (items == null) {
+                return signed;
+            }
+
+            for (SignedBatchItem item : items) {
+                if (item == null
+                        || item.error() != null
+                        || item.path() == null
+                        || item.signedURL() == null
+                        || !requested.contains(item.path())) {
+                    continue;
+                }
+
+                String expectedPrefix = "/object/sign/" + BUCKET + "/" + item.path() + "?";
+
+                if (item.signedURL().startsWith(expectedPrefix)) {
+                    signed.put(item.path(), baseUrl + item.signedURL());
+                }
+            }
+
+            return signed;
+        } catch (RestClientException exception) {
+            throw unavailable();
+        }
+    }
+
     public void delete(String path) {
         validatePath(path);
 
@@ -122,5 +172,8 @@ public class SupabasePictureStorage {
     }
 
     public record SignedResponse(String signedURL) {
+    }
+
+    public record SignedBatchItem(String error, String path, String signedURL) {
     }
 }

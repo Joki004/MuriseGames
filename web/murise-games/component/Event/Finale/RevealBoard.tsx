@@ -96,8 +96,8 @@ interface RevealBoardProps {
   variant?: "tv" | "player";
 }
 
-/** Public board: the API only ever returns titles the host has revealed. */
-export function RevealBoard({ eventId, variant = "player" }: RevealBoardProps) {
+/** Polls the public reveals. Call it once per screen and pass the result down. */
+export function useRevealBoard(eventId: string): RevealListResponse | null {
   const [data, setData] = useState<RevealListResponse | null>(null);
   const [tick, setTick] = useState(0);
 
@@ -125,7 +125,28 @@ export function RevealBoard({ eventId, variant = "player" }: RevealBoardProps) {
     return () => clearInterval(id);
   }, [closed]);
 
-  if (!data || (!closed && data.reveals.length === 0)) {
+  return data;
+}
+
+/** True once guessing is closed or a title is revealed: the finale has started. */
+export function isFinaleOnStage(data: RevealListResponse | null) {
+  return data !== null && (data.guessingStatus === "closed" || data.reveals.length > 0);
+}
+
+/** Public board: the API only ever returns titles the host has revealed. */
+export function RevealBoard({ eventId, variant = "player" }: RevealBoardProps) {
+  const data = useRevealBoard(eventId);
+  return <RevealBoardView data={data} variant={variant} />;
+}
+
+export function RevealBoardView({
+  data,
+  variant = "player",
+}: {
+  data: RevealListResponse | null;
+  variant?: "tv" | "player";
+}) {
+  if (!isFinaleOnStage(data) || !data) {
     return null;
   }
 
@@ -134,7 +155,7 @@ export function RevealBoard({ eventId, variant = "player" }: RevealBoardProps) {
   return (
     <Card className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className={large ? "text-2xl font-bold" : "text-lg font-bold"}>
+        <h2 className={large ? "text-3xl font-bold" : "text-lg font-bold"}>
           Secret Scene Premiere
         </h2>
         <Badge tone="warning">Guesses locked</Badge>
