@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Dialog, Input, Select } from "@/component/ui";
 import { StarPlayersButton } from "@/component/Event/PlayerPoints/StarPlayersButton";
 import { StarPlayersEditor } from "@/component/Event/PlayerPoints/StarPlayersEditor";
+import { DuelTrackerDialog } from "@/component/Event/Duel/DuelTrackerDialog";
+import { isDuelGame } from "@/modules/Event/Duel";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -81,6 +83,9 @@ export function FixtureResultButton({
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
   // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
   const [scorable, setScorable] = useState<boolean | null>(null);
+  // Grab the Cup style games get a live duel tracker (GM-044).
+  const [knownGame, setKnownGame] = useState<ScorePreviewGame | null>(null);
+  const [trackerOpen, setTrackerOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -90,7 +95,10 @@ export function FixtureResultButton({
     source
       .then((games) => {
         const game = games.find((g) => g.eventGameId === fixture.eventGameId);
-        if (active) setScorable(Boolean(game && !game.unavailableReason));
+        if (active) {
+          setScorable(Boolean(game && !game.unavailableReason));
+          setKnownGame(game ?? null);
+        }
       })
       // If the definitions can't be loaded, keep the button: the dialog shows the error.
       .catch(() => {
@@ -216,8 +224,13 @@ export function FixtureResultButton({
     <>
       <div className="flex flex-wrap items-center gap-2">
         {completed && <Badge tone="success">Result recorded</Badge>}
+        {!completed && knownGame && isDuelGame(knownGame) && playing.length === 2 && (
+          <Button onClick={() => setTrackerOpen(true)}>▶ Run duels</Button>
+        )}
         <Button
-          variant={completed ? "secondary" : "primary"}
+          variant={
+            completed || (knownGame && isDuelGame(knownGame)) ? "secondary" : "primary"
+          }
           onClick={() => void openDialog()}
         >
           {completed ? "Correct result" : "Record result"}
@@ -230,6 +243,21 @@ export function FixtureResultButton({
           />
         )}
       </div>
+
+      {trackerOpen && knownGame && playing.length === 2 && (
+        <DuelTrackerDialog
+          eventId={eventId}
+          fixtureId={fixture.fixtureId}
+          title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          teams={[
+            { teamId: playing[0].teamId, teamName: playing[0].teamName },
+            { teamId: playing[1].teamId, teamName: playing[1].teamName },
+          ]}
+          duelCount={knownGame.fields.length}
+          onClose={() => setTrackerOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
 
       <Dialog
         open={open}
