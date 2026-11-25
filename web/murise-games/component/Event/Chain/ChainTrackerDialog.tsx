@@ -32,6 +32,12 @@ import {
 } from "@/modules/Event/PlayerPoints";
 import { ScoringController } from "@/modules/Event/Scoring";
 
+
+/** Wall-clock time, read only in event handlers and timers (never while rendering). */
+function currentTime() {
+  return Date.now();
+}
+
 interface ChainTrackerDialogProps {
   eventId: string;
   fixtureId: string;
@@ -74,7 +80,7 @@ export function ChainTrackerDialog({
 }: ChainTrackerDialogProps) {
   const [players, setPlayers] = useState<FixturePlayer[]>([]);
   const [match, setMatch] = useState<ChainMatchState | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(currentTime);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -103,7 +109,7 @@ export function ChainTrackerDialog({
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
-      const tick = Date.now();
+      const tick = currentTime();
       setNow(tick);
       setMatch((current) => {
         if (!current) return current;
@@ -120,7 +126,7 @@ export function ChainTrackerDialog({
 
   function update(change: (current: ChainMatchState, at: number) => ChainMatchState) {
     if (!match) return;
-    const at = Date.now();
+    const at = currentTime();
     const next = change(match, at);
     storeChainMatch(next);
     setNow(at);
