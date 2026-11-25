@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useEventDetail } from "@/component/Event/EventShell";
 import {
   Alert,
   Badge,
@@ -43,7 +44,11 @@ const linesToArray = (value: string) =>
 const arrayToLines = (items: string[]) => items.join("\n");
 
 export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
+  const { canManage, roles } = useEventDetail();
+  const isWriter = !canManage && roles.includes("CASE_WRITER");
+
   const [pool, setPool] = useState<SocialPoolResponse | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [requests, setRequests] = useState<SocialAccessRequestView[]>([]);
   const [selected, setSelected] = useState<SocialCaseDetail | null>(null);
   const [newLabel, setNewLabel] = useState("");
@@ -97,6 +102,8 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
       setError(
         err instanceof Error ? err.message : "Failed to load Social Scenario pool.",
       );
+    } finally {
+      setLoaded(true);
     }
   }, [eventId]);
 
@@ -111,6 +118,7 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
         setError(null);
         setPool(poolRes.data ?? null);
         setRequests(requestRes.data ?? []);
+        setLoaded(true);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -119,13 +127,14 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
             ? err.message
             : "Failed to load Social Scenario pool.",
         );
+        setLoaded(true);
       });
     return () => {
       cancelled = true;
     };
   }, [eventId]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     if (!newLabel.trim()) return;
     setBusy(true);
@@ -247,7 +256,7 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
     }
   };
 
-  const handleAssignRole = async (e: React.FormEvent) => {
+  const handleAssignRole = async (e: FormEvent) => {
     e.preventDefault();
     if (!selected || !assignUserId.trim()) return;
     setBusy(true);
@@ -270,25 +279,37 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
     }
   };
 
+  const cases = pool?.cases ?? [];
+  const canApprove = pool?.canApprove ?? canManage;
+  const readyCount = cases.filter((c) => c.ready).length;
+
   return (
     <div className="space-y-6">
-      {error && <Alert>{error}</Alert>}
-      {feedback && <Alert>{feedback}</Alert>}
+      {error && <Alert tone="error">{error}</Alert>}
+      {feedback && <Alert tone="success">{feedback}</Alert>}
 
-      <Card className="space-y-4">
+      <Card>
         <CardHeader>
-          <CardTitle>Social Scenario Case Pool</CardTitle>
+          <CardTitle>Social cases</CardTitle>
           <CardDescription>
-            Create versioned Social Scenario cases. Opening a case marks it seen so your team
-            won&apos;t receive it during play.
+            {canApprove
+              ? "You created the event: you can open every case and answer access requests."
+              : isWriter
+                ? "You are a case writer: create cases and open the ones you wrote. To open another case, ask the event creator."
+                : "Create versioned Social Scenario cases and open the ones you wrote. To open another case, ask the event creator."}
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleCreate} className="flex items-end gap-2 px-6">
-          <div className="flex-1">
+        <Alert tone="info">
+          Anyone who writes, edits or opens a case knows its details, so their
+          team will never be given that case during Social Scenario.
+        </Alert>
+
+        <form onSubmit={handleCreate} className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="min-w-[16rem] flex-1">
             <Input
-              label="New scenario label"
-              placeholder="Embassy Briefing"
+              label="New case name"
+              hint="e.g. “Embassy Briefing”."
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               maxLength={80}
@@ -298,120 +319,250 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
             Create case
           </Button>
         </form>
+      </Card>
 
-        <div className="space-y-2 px-6 pb-6">
-          {pool?.cases.map((c) => (
-            <div
-              key={c.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{c.label}</span>
-                  <Badge>{c.ready ? "Ready" : "Draft"}</Badge>
-                  <span className="text-xs text-muted-foreground">v{c.currentVersion}</span>
-                  {c.seenByMe && <Badge>Seen by you</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Written by {c.writtenBy} · Last edited by {c.lastEditedBy}
-                </p>
-              </div>
+      {requests.length > 0 && (
+        <Card className="space-y-4">
+          <CardHeader>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>
+                {canApprove ? "Access requests" : "Your access requests"}
+              </CardTitle>
+              {pool && pool.pendingRequests > 0 && (
+                <Badge tone="warning">{pool.pendingRequests} waiting</Badge>
+              )}
+            </div>
+            <CardDescription>
+              {canApprove
+                ? "People asking to open a case they did not write. Approving means their team will never be given that case."
+                : "The event creator approves or refuses each request."}
+            </CardDescription>
+          </CardHeader>
 
-              <div className="flex items-center gap-2">
-                {c.canOpen ? (
-                  <>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() => void handleOpenCase(c.id)}
+          <ul className="space-y-2">
+            {requests.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-3"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{r.caseLabel}</span>
+                    <Badge
+                      tone={
+                        r.status === "approved"
+                          ? "success"
+                          : r.status === "refused"
+                            ? "danger"
+                            : "warning"
+                      }
                     >
-                      Open
+                      {r.status}
+                    </Badge>
+                    <span className="text-xs text-muted">by {r.requester}</span>
+                  </div>
+                  <p className="text-sm text-muted">“{r.reason}”</p>
+                </div>
+
+                {canApprove && r.status === "pending" && (
+                  <div className="flex gap-2">
+                    <Button
+                      disabled={busy}
+                      onClick={() => void handleDecide(r.id, true)}
+                    >
+                      Approve
                     </Button>
                     <Button
                       variant="danger"
                       disabled={busy}
-                      onClick={() => void handleArchive(c.id)}
+                      onClick={() => void handleDecide(r.id, false)}
                     >
-                      Remove
+                      Refuse
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    {c.myRequestStatus && <Badge>{c.myRequestStatus}</Badge>}
-                    {c.myRequestStatus !== "pending" && (
-                      <Button
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() => setRequestCaseId(c.id)}
-                      >
-                        Request access
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {requestCaseId === c.id && (
-                <div className="w-full pt-2 flex items-end gap-2">
-                  <div className="flex-1">
-                    <Input
-                      label="Reason"
-                      placeholder="Reason for opening this scenario..."
-                      value={requestReason}
-                      onChange={(e) => setRequestReason(e.target.value)}
-                    />
                   </div>
-                  <Button
-                    disabled={busy || !requestReason.trim()}
-                    onClick={() => void handleRequestAccess(c.id)}
-                  >
-                    Send
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setRequestCaseId(null);
-                      setRequestReason("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
-      {selected && (
-        <Card className="space-y-4 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-lg font-semibold">
-                Editing: {selected.label} (v{selected.currentVersion})
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Seen by: {selected.seenBy.length > 0 ? selected.seenBy.join(", ") : "None"}
+      {loaded && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>Pool ({cases.length})</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge tone={readyCount > 0 ? "success" : "warning"}>
+                  {readyCount} ready
+                </Badge>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void refresh()}
+                >
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          {cases.length === 0 ? (
+            <div className="rounded-[var(--ui-radius-card)] border border-dashed border-border p-8 text-center">
+              <p className="text-2xl" aria-hidden="true">
+                🎭
+              </p>
+              <p className="mt-2 font-medium">No cases yet</p>
+              <p className="mt-1 text-sm text-muted">
+                Create the first case above.
               </p>
             </div>
-            <Badge>{selected.ready ? "Ready to play" : "Incomplete"}</Badge>
-          </div>
+          ) : (
+            <ul className="space-y-2">
+              {cases.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <p className="break-words font-medium">{c.label}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge tone={c.ready ? "success" : "warning"}>
+                        {c.ready ? "Ready" : "Draft"}
+                      </Badge>
+                      {c.currentVersion > 0 && (
+                        <Badge>v{c.currentVersion}</Badge>
+                      )}
+                      {c.seenByMe && <Badge tone="accent">You know it</Badge>}
+                    </div>
+                    <p className="text-xs text-muted">
+                      Written by {c.writtenBy} · last edit by {c.lastEditedBy}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {c.canOpen ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() => void handleOpenCase(c.id)}
+                        >
+                          Open
+                        </Button>
+                        <Button
+                          variant="danger"
+                          disabled={busy}
+                          onClick={() => void handleArchive(c.id)}
+                        >
+                          Remove
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {c.myRequestStatus && (
+                          <Badge
+                            tone={
+                              c.myRequestStatus === "approved"
+                                ? "success"
+                                : c.myRequestStatus === "refused"
+                                  ? "danger"
+                                  : "warning"
+                            }
+                          >
+                            {c.myRequestStatus}
+                          </Badge>
+                        )}
+                        {c.myRequestStatus !== "pending" && (
+                          <Button
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() => {
+                              setRequestCaseId(c.id);
+                              setRequestReason("");
+                            }}
+                          >
+                            🔒 Ask to open
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {requestCaseId === c.id && (
+                    <div className="mt-2 flex w-full flex-wrap items-end gap-2 border-t border-border pt-3">
+                      <div className="min-w-[14rem] flex-1">
+                        <Input
+                          label="Why do you need to open it?"
+                          placeholder="Reason for opening this scenario..."
+                          value={requestReason}
+                          onChange={(e) => setRequestReason(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        disabled={busy || !requestReason.trim()}
+                        onClick={() => void handleRequestAccess(c.id)}
+                      >
+                        Send request
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setRequestCaseId(null);
+                          setRequestReason("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
+
+      {selected && (
+        <Card className="space-y-4">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle>
+                  Editing: {selected.label} (v{selected.currentVersion})
+                </CardTitle>
+                <CardDescription>
+                  Seen by:{" "}
+                  {selected.seenBy.length > 0
+                    ? selected.seenBy.join(", ")
+                    : "None"}
+                </CardDescription>
+              </div>
+              <Badge tone={selected.ready ? "success" : "warning"}>
+                {selected.ready ? "Ready to play" : "Draft"}
+              </Badge>
+            </div>
+          </CardHeader>
 
           {selected.missing.length > 0 && (
-            <Alert>Missing before play: {selected.missing.join(" ")}</Alert>
+            <Alert tone="info">
+              Missing before play: {selected.missing.join(" ")}
+            </Alert>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Input
-              label="Case Label"
+              label="Case label"
               value={editLabel}
               onChange={(e) => setEditLabel(e.target.value)}
             />
 
             <div>
-              <label className="text-xs font-medium">Public Setup (visible to all roles)</label>
+              <label className="text-xs font-medium">
+                Public setup (visible to all roles)
+              </label>
               <textarea
-                className="w-full rounded-md border bg-background p-2 text-sm min-h-20"
+                className="mt-1 min-h-20 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                 value={publicSetup}
                 onChange={(e) => setPublicSetup(e.target.value)}
               />
@@ -419,33 +570,41 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs font-medium">Defender Goals (one per line)</label>
+                <label className="text-xs font-medium">
+                  Defender goals (one per line)
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-24"
+                  className="mt-1 min-h-24 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={defenderGoalsText}
                   onChange={(e) => setDefenderGoalsText(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium">Defender Constraints (one per line)</label>
+                <label className="text-xs font-medium">
+                  Defender constraints (one per line)
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-24"
+                  className="mt-1 min-h-24 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={defenderConstraintsText}
                   onChange={(e) => setDefenderConstraintsText(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium">Attacker Red Flags (one per line)</label>
+                <label className="text-xs font-medium">
+                  Attacker red flags (one per line)
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-24"
+                  className="mt-1 min-h-24 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={attackerRedFlagsText}
                   onChange={(e) => setAttackerRedFlagsText(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium">Attacker Bait (one per line)</label>
+                <label className="text-xs font-medium">
+                  Attacker bait (one per line)
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-24"
+                  className="mt-1 min-h-24 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={attackerBaitText}
                   onChange={(e) => setAttackerBaitText(e.target.value)}
                 />
@@ -454,36 +613,52 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-xs font-medium">Judge Rubric Summary</label>
+                <label className="text-xs font-medium">
+                  Judge rubric summary
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-20"
+                  className="mt-1 min-h-20 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={rubricSummary}
                   onChange={(e) => setRubricSummary(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-medium">Judge Criteria (one per line)</label>
+                <label className="text-xs font-medium">
+                  Judge criteria (one per line)
+                </label>
                 <textarea
-                  className="w-full rounded-md border bg-background p-2 text-sm min-h-20"
+                  className="mt-1 min-h-20 w-full rounded-[var(--ui-radius-control)] border border-border bg-background/50 p-2 text-sm"
                   value={rubricCriteriaText}
                   onChange={(e) => setRubricCriteriaText(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
               <Button disabled={busy} onClick={() => void handleSave()}>
                 Save new version
               </Button>
-              <span className="text-xs text-muted-foreground">
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => syncEditor(null)}
+              >
+                Close editor
+              </Button>
+              <span className="text-xs text-muted">
                 Versions:{" "}
-                {selected.versions.map((v) => `v${v.versionNumber}`).join(", ") || "none"}
+                {selected.versions
+                  .map((v) => `v${v.versionNumber}`)
+                  .join(", ") || "none"}
               </span>
             </div>
           </div>
 
-          {pool?.canApprove && selected.currentVersion > 0 && (
-            <form onSubmit={handleAssignRole} className="border-t pt-4 space-y-3">
+          {canApprove && selected.currentVersion > 0 && (
+            <form
+              onSubmit={handleAssignRole}
+              className="space-y-3 border-t border-border pt-4"
+            >
               <h4 className="text-sm font-semibold">Assign Private Role Card</h4>
               <div className="grid gap-2 md:grid-cols-4">
                 <Input
@@ -491,7 +666,9 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
                   type="number"
                   min={1}
                   value={assignRound}
-                  onChange={(e) => setAssignRound(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(e) =>
+                    setAssignRound(Math.max(1, Number(e.target.value) || 1))
+                  }
                 />
                 <Input
                   label="Target User UUID"
@@ -508,7 +685,9 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
                 <Select
                   label="Role"
                   value={assignRole}
-                  onChange={(e) => setAssignRole(e.target.value as SocialRoleCardType)}
+                  onChange={(e) =>
+                    setAssignRole(e.target.value as SocialRoleCardType)
+                  }
                 >
                   <option value="DEFENDER">DEFENDER</option>
                   <option value="ATTACKER">ATTACKER</option>
@@ -521,43 +700,6 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
               </Button>
             </form>
           )}
-        </Card>
-      )}
-
-      {requests.length > 0 && (
-        <Card className="space-y-3 p-6">
-          <h3 className="text-base font-semibold">
-            Access Requests ({pool?.pendingRequests ?? 0} pending)
-          </h3>
-          {requests.map((r) => (
-            <div
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{r.caseLabel}</span>
-                  <Badge>{r.status}</Badge>
-                  <span className="text-xs text-muted-foreground">by {r.requester}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{r.reason}</p>
-              </div>
-              {pool?.canApprove && r.status === "pending" && (
-                <div className="flex gap-2">
-                  <Button disabled={busy} onClick={() => void handleDecide(r.id, true)}>
-                    Approve
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => void handleDecide(r.id, false)}
-                  >
-                    Refuse
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
         </Card>
       )}
     </div>
