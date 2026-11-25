@@ -8,10 +8,12 @@ import { DuelTrackerDialog } from "@/component/Event/Duel/DuelTrackerDialog";
 import { ChainTrackerDialog } from "@/component/Event/Chain/ChainTrackerDialog";
 import { GroupChatTrackerDialog } from "@/component/Event/GroupChat/GroupChatTrackerDialog";
 import { PoisonTrackerDialog } from "@/component/Event/Poison/PoisonTrackerDialog";
+import { GridTrackerDialog } from "@/component/Event/Grid/GridTrackerDialog";
 import { isDuelGame } from "@/modules/Event/Duel";
 import { isChainGame } from "@/modules/Event/Chain";
 import { isGroupChatGame } from "@/modules/Event/GroupChat";
 import { isPoisonGame } from "@/modules/Event/Poison";
+import { isGridGame } from "@/modules/Event/Grid";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -57,11 +59,12 @@ function loadGames(eventId: string) {
   return cached;
 }
 
-type Tracker = "duel" | "poison" | "chain" | "groupChat";
+type Tracker = "duel" | "poison" | "grid" | "chain" | "groupChat";
 
 const TRACKER_LABEL: Record<Tracker, string> = {
   duel: "▶ Run duels",
   poison: "▶ Run rounds (gamemaster)",
+  grid: "▶ Run turns",
   chain: "▶ Run turns",
   groupChat: "▶ Run rounds",
 };
@@ -70,6 +73,7 @@ const TRACKER_LABEL: Record<Tracker, string> = {
 function trackerFor(game: ScorePreviewGame, playingTeams: number): Tracker | null {
   if (playingTeams === 2 && isDuelGame(game)) return "duel";
   if (playingTeams === 2 && isPoisonGame(game)) return "poison";
+  if (playingTeams === 2 && isGridGame(game)) return "grid";
   if (playingTeams === 1 && isChainGame(game)) return "chain";
   if (playingTeams === 1 && isGroupChatGame(game)) return "groupChat";
   return null;
@@ -107,7 +111,8 @@ export function FixtureResultButton({
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
   // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
   const [scorable, setScorable] = useState<boolean | null>(null);
-  // Live trackers: Grab the Cup (GM-044), Sensory Chain (GM-045), Poison (GM-048), Group Chat (GM-050).
+  // Live trackers: Grab the Cup (GM-044), Sensory Chain (GM-045), Poison (GM-048),
+  // Rhythm Grid (GM-049), Group Chat (GM-050).
   const [knownGame, setKnownGame] = useState<ScorePreviewGame | null>(null);
   const [trackerOpen, setTrackerOpen] = useState(false);
 
@@ -293,6 +298,21 @@ export function FixtureResultButton({
             { teamId: playing[1].teamId, teamName: playing[1].teamName },
           ]}
           roundCount={knownGame.fields.length}
+          onClose={() => setTrackerOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
+
+      {trackerOpen && knownGame && tracker === "grid" && (
+        <GridTrackerDialog
+          eventId={eventId}
+          fixtureId={fixture.fixtureId}
+          title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          teams={[
+            { teamId: playing[0].teamId, teamName: playing[0].teamName },
+            { teamId: playing[1].teamId, teamName: playing[1].teamName },
+          ]}
+          turnCount={knownGame.fields.length}
           onClose={() => setTrackerOpen(false)}
           onSaved={onChanged}
         />
