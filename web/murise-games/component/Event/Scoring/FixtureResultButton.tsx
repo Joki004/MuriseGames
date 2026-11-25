@@ -5,7 +5,9 @@ import { Alert, Badge, Button, Dialog, Input, Select } from "@/component/ui";
 import { StarPlayersButton } from "@/component/Event/PlayerPoints/StarPlayersButton";
 import { StarPlayersEditor } from "@/component/Event/PlayerPoints/StarPlayersEditor";
 import { DuelTrackerDialog } from "@/component/Event/Duel/DuelTrackerDialog";
+import { ChainTrackerDialog } from "@/component/Event/Chain/ChainTrackerDialog";
 import { isDuelGame } from "@/modules/Event/Duel";
+import { isChainGame } from "@/modules/Event/Chain";
 import {
   ScoringController,
   type FixtureSettlementResponse,
@@ -83,7 +85,7 @@ export function FixtureResultButton({
   const [saved, setSaved] = useState<FixtureSettlementResponse | null>(null);
   // null = still checking; false = this game has no scoring (e.g. Final Rehearsal).
   const [scorable, setScorable] = useState<boolean | null>(null);
-  // Grab the Cup style games get a live duel tracker (GM-044).
+  // Live trackers: Grab the Cup duels (GM-044), Sensory Chain turns (GM-045).
   const [knownGame, setKnownGame] = useState<ScorePreviewGame | null>(null);
   const [trackerOpen, setTrackerOpen] = useState(false);
 
@@ -108,6 +110,14 @@ export function FixtureResultButton({
       active = false;
     };
   }, [eventId, fixture.eventGameId, suppliedGames]);
+
+  const tracker: "duel" | "chain" | null = !knownGame
+    ? null
+    : isDuelGame(knownGame) && playing.length === 2
+      ? "duel"
+      : isChainGame(knownGame) && playing.length === 1
+        ? "chain"
+        : null;
 
   if (isBye) return null;
 
@@ -224,13 +234,13 @@ export function FixtureResultButton({
     <>
       <div className="flex flex-wrap items-center gap-2">
         {completed && <Badge tone="success">Result recorded</Badge>}
-        {!completed && knownGame && isDuelGame(knownGame) && playing.length === 2 && (
-          <Button onClick={() => setTrackerOpen(true)}>▶ Run duels</Button>
+        {!completed && tracker && (
+          <Button onClick={() => setTrackerOpen(true)}>
+            {tracker === "duel" ? "▶ Run duels" : "▶ Run turns"}
+          </Button>
         )}
         <Button
-          variant={
-            completed || (knownGame && isDuelGame(knownGame)) ? "secondary" : "primary"
-          }
+          variant={completed || tracker ? "secondary" : "primary"}
           onClick={() => void openDialog()}
         >
           {completed ? "Correct result" : "Record result"}
@@ -244,7 +254,20 @@ export function FixtureResultButton({
         )}
       </div>
 
-      {trackerOpen && knownGame && playing.length === 2 && (
+      {trackerOpen && knownGame && tracker === "chain" && (
+        <ChainTrackerDialog
+          eventId={eventId}
+          fixtureId={fixture.fixtureId}
+          title={`${fixture.gameName} · Round ${fixture.roundNumber}`}
+          team={{ teamId: playing[0].teamId, teamName: playing[0].teamName }}
+          turnCount={knownGame.fields.length}
+          cardsPerTurn={knownGame.maximumPerField}
+          onClose={() => setTrackerOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
+
+      {trackerOpen && knownGame && tracker === "duel" && (
         <DuelTrackerDialog
           eventId={eventId}
           fixtureId={fixture.fixtureId}
