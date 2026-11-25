@@ -37,6 +37,10 @@ import com.murisegames.api.modules.Event.Alibi.Game.AlibiAnswerRepository;
 import com.murisegames.api.modules.Event.Alibi.Game.AlibiPromptRepository;
 import com.murisegames.api.modules.Event.Alibi.Game.AlibiRoundRepository;
 import com.murisegames.api.modules.Event.Alibi.Game.AlibiSessionRepository;
+import com.murisegames.api.modules.Event.Social.SocialCaseAccessRequestRepository;
+import com.murisegames.api.modules.Event.Social.SocialCaseRepository;
+import com.murisegames.api.modules.Event.Social.SocialCaseVersionRepository;
+import com.murisegames.api.modules.Event.Social.SocialRoleAssignmentRepository;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration"
@@ -142,6 +146,18 @@ class ApiApplicationTests {
 
     @MockitoBean
     private AlibiAnswerRepository alibiAnswerRepository;
+
+    @MockitoBean
+    private SocialCaseRepository socialCaseRepository;
+
+    @MockitoBean
+    private SocialCaseVersionRepository socialCaseVersionRepository;
+
+    @MockitoBean
+    private SocialRoleAssignmentRepository socialRoleAssignmentRepository;
+
+    @MockitoBean
+    private SocialCaseAccessRequestRepository socialCaseAccessRequestRepository;
 
     @Test
     void contextLoads() {

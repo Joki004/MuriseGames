@@ -9,6 +9,7 @@ import { AlibiPlayerCard } from "@/component/Event/Alibi/Game/AlibiPlayerCard";
 import { TeamResultsCard } from "@/component/Event/Scoring/TeamResultsCard";
 import { SecretSceneGuessPanel } from "@/component/Event/Guess/SecretSceneGuessPanel";
 import { PageShell } from "@/component/Layout/PageShell";
+import { SocialPlayerCard } from "@/component/Event/Social/SocialPlayerCard";
 import {
   Alert,
   Badge,
@@ -139,6 +140,7 @@ export function PlayerScreenView() {
 
         {/* Only shows when this player is in an Alibi pair. */}
         <AlibiPlayerCard eventId={eventId} />
+        <SocialPlayerCard eventId={eventId} />
 
         <Card className="space-y-5 text-center">
           <div className="flex justify-center gap-2">

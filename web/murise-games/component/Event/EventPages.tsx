@@ -15,6 +15,7 @@ import { AsyncContent } from "@/component/ui/AsyncContent";
 import { ParticipantController } from "@/modules/Event/Participant";
 import { EventLivePanel } from "./Live/EventLivePanel";
 import { RefereeAssignmentPanel } from "./Referee/RefereeAssignmentPanel";
+import { SocialCasePoolPanel } from "./Social/SocialCasePoolPanel";
 import {
   Alert,
   Badge,
@@ -294,6 +295,7 @@ export function EventGames() {
       </div>
 
       <EventGamePanel eventId={event.id} canManage={canManage} />
+      <SocialCasePoolPanel eventId={event.id} />
     </div>
   );
 }
