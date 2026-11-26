@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useEventDetail } from "@/component/Event/EventShell";
 import { FixtureResultButton } from "@/component/Event/Scoring/FixtureResultButton";
@@ -24,6 +25,19 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Alibi is judged and recorded live on the Alibi game page, not here. */
+function isAlibiGame(game: { name: string; headToHead: boolean; fields: string[] } | undefined) {
+  if (!game) return false;
+  return (
+    /alibi/i.test(game.name) ||
+    (!game.headToHead && game.fields.join("|") === "Pair 1|Pair 2")
+  );
+}
+
+function isClosed(status: string) {
+  return status === "completed" || status === "voided";
 }
 
 /** Referee: matches of the games assigned to me, with Record result buttons. */
@@ -80,7 +94,11 @@ export function RefereeDesk() {
     );
   }
 
-  const fixtures = desk?.fixtures ?? [];
+  // Matches still to record first, finished ones at the bottom.
+  const fixtures = [...(desk?.fixtures ?? [])].sort(
+    (a, b) => Number(isClosed(a.status)) - Number(isClosed(b.status)),
+  );
+  const alibiGame = desk?.games.find((g) => isAlibiGame(g));
   const toRecord = fixtures.filter(
     (f) => !f.ownTeam && f.status !== "completed" && f.status !== "voided",
   ).length;
@@ -112,6 +130,19 @@ export function RefereeDesk() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
+      {alibiGame && (
+        <Alert tone="info">
+          You judge the Alibi game: run it from the{" "}
+          <Link
+            href={`/events/${event.id}/alibi-game`}
+            className="font-semibold underline"
+          >
+            Alibi game page
+          </Link>
+          . Its scores are saved there when you finish.
+        </Alert>
+      )}
+
       {loading && !desk ? (
         <p className="text-sm text-muted">Loading your matches…</p>
       ) : !desk ? null : desk.games.length === 0 ? (
@@ -132,10 +163,17 @@ export function RefereeDesk() {
         <ul className="space-y-2">
           {fixtures.map((f) => {
             const isBye = f.teams.some((t) => t.side === "bye");
+            const closed = isClosed(f.status);
+            const alibi = isAlibiGame(
+              desk.games.find((g) => g.eventGameId === f.eventGameId),
+            );
             return (
               <li
                 key={f.fixtureId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--ui-radius-control)] border border-border p-3 text-sm"
+                className={[
+                  "flex flex-wrap items-center justify-between gap-3 rounded-[var(--ui-radius-control)] border border-border p-3 text-sm",
+                  closed ? "opacity-60" : "",
+                ].join(" ")}
               >
                 <div>
                   <p className="font-semibold">
@@ -160,6 +198,15 @@ export function RefereeDesk() {
                   <div className="flex flex-wrap items-center gap-2">
                     {f.teamBusy && (
                       <Badge tone="warning">Your team plays at this time</Badge>
+                    )}
+                    {closed && <Badge tone="success">Recorded</Badge>}
+                    {alibi && !closed && (
+                      <Link
+                        href={`/events/${event.id}/alibi-game`}
+                        className="ui-button ui-button--primary"
+                      >
+                        Judge on Alibi page →
+                      </Link>
                     )}
                     <FixtureResultButton
                       eventId={event.id}

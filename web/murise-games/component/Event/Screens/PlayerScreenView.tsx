@@ -279,6 +279,7 @@ export function PlayerScreenView() {
           {activeGame?.code && (
             <Link
               href={`/games/${encodeURIComponent(activeGame.code)}`}
+              target="_blank"
               className="ui-button ui-button--secondary w-full"
             >
               {activeGame.name} rules
@@ -298,6 +299,12 @@ export function PlayerScreenView() {
                   ? "✓ Team ready (tap to undo)"
                   : "Mark team ready"}
             </Button>
+          )}
+          {myTeam && !isReady && (
+            <p className="text-center text-xs text-muted">
+              Tap when your whole team is at the station: the host starts when
+              everyone is ready.
+            </p>
           )}
         </Card>
 

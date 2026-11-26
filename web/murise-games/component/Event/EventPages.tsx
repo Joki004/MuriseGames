@@ -154,30 +154,45 @@ export function EventOverview() {
           </Card>
         </section>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href={`/events/${event.id}/play`}
-          className="ui-button ui-button--primary"
-        >
-          Player screen
-        </Link>
-
-        <Link
-          href={`/events/${event.id}/tv`}
-          className="ui-button ui-button--secondary"
-        >
-          TV display
-        </Link>
-
-        {canManage && (
+      {canManage ? (
+        <div className="flex flex-wrap gap-2">
           <Link
             href={`/events/${event.id}/host`}
+            className="ui-button ui-button--primary"
+          >
+            ▶ Run the night (Host)
+          </Link>
+          <Link
+            href={`/events/${event.id}/tv`}
+            target="_blank"
             className="ui-button ui-button--secondary"
           >
-            Host control deck
+            Open TV screen ↗
           </Link>
-        )}
-      </div>
+          <Link
+            href={`/events/${event.id}/play`}
+            className="ui-button ui-button--secondary"
+          >
+            Player screen
+          </Link>
+        </div>
+      ) : (
+        <Card className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold">Game night screen</h3>
+            <p className="mt-1 text-sm text-muted">
+              Open it on your phone and keep it open all night: it shows your
+              next match, the Alibi questions and the clues.
+            </p>
+          </div>
+          <Link
+            href={`/events/${event.id}/play`}
+            className="ui-button ui-button--primary w-full"
+          >
+            Open my game screen
+          </Link>
+        </Card>
+      )}
       <EventLivePanel eventId={event.id} canManage={canManage} />
       <Card>
         <CardHeader>
