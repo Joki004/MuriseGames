@@ -116,6 +116,7 @@ function EventHeader() {
 
   const links = [
     { href: base, label: "Overview" },
+    ...(canManage ? [{ href: `${base}/host`, label: "Host ▶" }] : []),
     { href: `${base}/people`, label: "People" },
     { href: `${base}/games`, label: "Games" },
     ...(canManage
