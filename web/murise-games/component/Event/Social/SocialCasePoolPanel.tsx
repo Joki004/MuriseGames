@@ -21,6 +21,18 @@ import {
   type SocialPoolResponse,
   type SocialRoleCardType,
 } from "@/modules/Event/Social";
+import {
+  ParticipantController,
+  type EventParticipantResponse,
+  type TeamOption,
+} from "@/modules/Event/Participant";
+
+const ROLE_LABELS: Record<SocialRoleCardType, string> = {
+  DEFENDER: "Defender",
+  ATTACKER: "Attacker",
+  JUDGE: "Judge",
+  AUDIENCE: "Audience",
+};
 
 interface SocialCasePoolPanelProps {
   eventId: string;
@@ -73,7 +85,8 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
   // Role assignment state (creator only)
   const [assignRound, setAssignRound] = useState(1);
   const [assignUserId, setAssignUserId] = useState("");
-  const [assignTeamId, setAssignTeamId] = useState("");
+  const [players, setPlayers] = useState<EventParticipantResponse[]>([]);
+  const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
   const [assignRole, setAssignRole] = useState<SocialRoleCardType>("DEFENDER");
 
   const syncEditor = (detail: SocialCaseDetail | null) => {
@@ -133,6 +146,44 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
       cancelled = true;
     };
   }, [eventId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      ParticipantController.list(eventId),
+      ParticipantController.listActiveTeamOptions(eventId),
+    ])
+      .then(([participants, teams]) => {
+        if (cancelled) return;
+        setPlayers(
+          participants.filter((p) => p.status === "active" && p.userId),
+        );
+        setTeamOptions(teams);
+      })
+      .catch(() => {
+        // Only needed for assigning roles; the rest of the page works without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  const teamName = (teamId: string | null) =>
+    teamOptions.find((t) => t.id === teamId)?.name ?? null;
+  const assignedPlayer = players.find((p) => p.userId === assignUserId) ?? null;
+  // Players grouped by team, teams in their usual order, then people without a team.
+  const playerGroups = [
+    ...teamOptions.map((t) => ({
+      label: t.name,
+      members: players.filter((p) => p.teamId === t.id),
+    })),
+    {
+      label: "No team",
+      members: players.filter(
+        (p) => !p.teamId || !teamOptions.some((t) => t.id === p.teamId),
+      ),
+    },
+  ].filter((g) => g.members.length > 0);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -258,7 +309,7 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
 
   const handleAssignRole = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selected || !assignUserId.trim()) return;
+    if (!selected || !assignedPlayer?.userId) return;
     setBusy(true);
     setError(null);
     setFeedback(null);
@@ -267,11 +318,15 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
         roundNumber: assignRound,
         caseId: selected.id,
         versionNumber: selected.currentVersion || undefined,
-        userId: assignUserId.trim(),
-        teamId: assignTeamId.trim() || null,
+        userId: assignedPlayer.userId,
+        // Sending the team lets the server refuse a case this team has already seen.
+        teamId: assignedPlayer.teamId,
         role: assignRole,
       });
-      setFeedback(`Assigned ${assignRole} for round ${assignRound}.`);
+      setFeedback(
+        `${assignedPlayer.displayName} is ${ROLE_LABELS[assignRole]} in round ${assignRound}. Their card shows on their phone within ~10 s.`,
+      );
+      setAssignUserId("");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not assign role.");
     } finally {
@@ -659,29 +714,39 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
               onSubmit={handleAssignRole}
               className="space-y-3 border-t border-border pt-4"
             >
-              <h4 className="text-sm font-semibold">Assign Private Role Card</h4>
-              <div className="grid gap-2 md:grid-cols-4">
-                <Input
+              <div>
+                <h4 className="text-sm font-semibold">Give a player their role card</h4>
+                <p className="text-xs text-muted">
+                  The card appears on that player&apos;s phone by itself. Giving
+                  the same player another role in the same round replaces it.
+                </p>
+              </div>
+              <div className="grid gap-2 md:grid-cols-3">
+                <Select
                   label="Round"
-                  type="number"
-                  min={1}
-                  value={assignRound}
-                  onChange={(e) =>
-                    setAssignRound(Math.max(1, Number(e.target.value) || 1))
-                  }
-                />
-                <Input
-                  label="Target User UUID"
-                  placeholder="User UUID"
+                  value={String(assignRound)}
+                  onChange={(e) => setAssignRound(Number(e.target.value) || 1)}
+                >
+                  <option value="1">Round 1</option>
+                  <option value="2">Round 2</option>
+                </Select>
+                <Select
+                  label="Player"
                   value={assignUserId}
                   onChange={(e) => setAssignUserId(e.target.value)}
-                />
-                <Input
-                  label="Team UUID (optional)"
-                  placeholder="Team UUID"
-                  value={assignTeamId}
-                  onChange={(e) => setAssignTeamId(e.target.value)}
-                />
+                >
+                  <option value="">Choose a player…</option>
+                  {playerGroups.map((g) => (
+                    <optgroup key={g.label} label={g.label}>
+                      {g.members.map((p) => (
+                        <option key={p.id} value={p.userId ?? ""}>
+                          {p.displayName}
+                          {p.captain ? " (captain)" : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
                 <Select
                   label="Role"
                   value={assignRole}
@@ -689,14 +754,25 @@ export function SocialCasePoolPanel({ eventId }: SocialCasePoolPanelProps) {
                     setAssignRole(e.target.value as SocialRoleCardType)
                   }
                 >
-                  <option value="DEFENDER">DEFENDER</option>
-                  <option value="ATTACKER">ATTACKER</option>
-                  <option value="JUDGE">JUDGE</option>
-                  <option value="AUDIENCE">AUDIENCE</option>
+                  {(Object.keys(ROLE_LABELS) as SocialRoleCardType[]).map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
                 </Select>
               </div>
-              <Button type="submit" disabled={busy || !assignUserId.trim()}>
-                Assign role card
+              {assignedPlayer && (
+                <p className="text-xs text-muted">
+                  Team: {teamName(assignedPlayer.teamId) ?? "none"}
+                </p>
+              )}
+              {players.length === 0 && (
+                <p className="text-xs text-muted">
+                  No players yet: add people to the event first.
+                </p>
+              )}
+              <Button type="submit" disabled={busy || !assignedPlayer}>
+                Give role card
               </Button>
             </form>
           )}
